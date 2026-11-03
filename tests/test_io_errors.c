@@ -33,6 +33,10 @@ static int close_test(FILE *f) {
 }
 
 // On simule les erreurs dans ces deux sources seulement. Les fichiers du projet restent les memes.
+#undef fread
+#undef fwrite
+#undef fprintf
+#undef fclose
 #define fread read_test
 #define fwrite write_test
 #define fprintf print_test

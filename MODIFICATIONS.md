@@ -91,3 +91,11 @@ Vérifié sous Windows : les six exécutables passent d'une console en page de c
 - La commande de clonage du README pointe vers cette branche.
 - Les actions GitHub sont fixées aux versions vérifiées `checkout` 7.0.1 et `setup-python` 7.1.0.
 - Les tests sont relancés depuis une nouvelle copie des sources à publier. Les fichiers de compilation, outils locaux et clés d'essai restent exclus du dépôt.
+
+## Premier passage sur GitHub — 3 novembre
+
+- Les tests Windows passent. Le premier essai Linux a signalé un échec de compilation.
+- Dans `inputKey` de `rsa_tools.c`, les deux retours de `scanf` sont maintenant contrôlés. Une saisie incorrecte laisse la clé inchangée et indique `EINVAL`. Cela permet aussi la compilation avec les contrôles renforcés des en-têtes Linux.
+- Le test de lancement affiche la sortie du compilateur avant de signaler un échec, pour conserver le détail des erreurs dans les journaux GitHub.
+- Le test d'erreurs d'E/S retire les éventuelles macros de la bibliothèque C avant d'installer ses propres fonctions de simulation. Cela évite une redéfinition de `fprintf` avec les en-têtes Linux renforcés.
+- Le job macOS ARM n'a pas pu démarrer, faute de capacité disponible sur GitHub. Le workflow utilise maintenant le runner standard `macos-15-intel` pour vérifier macOS avec Clang.

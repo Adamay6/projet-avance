@@ -22,10 +22,11 @@ def main():
             ".DS_Store", "outils-locaux.txt", "w64devkit", "projet-avance"))
         commande = [sys.executable, str(copie / "tester.py")]
         # Le repertoire courant est different de celui des sources.
-        resultat = subprocess.run(commande, cwd=temporaire, check=True,
+        resultat = subprocess.run(commande, cwd=temporaire,
                                   stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
         texte = resultat.stdout.decode("utf-8").replace("\r\n", "\n")
-        print(texte, end="")
+        print(texte, end="", flush=True)
+        resultat.check_returncode()
         if "le caractère 'é'" not in texte or "Intégrité du fichier conservée" not in texte:
             raise RuntimeError("Les accents des programmes doivent rester en UTF-8.")
 

@@ -281,9 +281,9 @@ void inputKey(uint64_t E,uint64_t N,rsaKey_t *key){
   /// \brief pour debug : permet de saisir une clef
   /// \note ça peut servir... ou pas.
   printf("Entrez l'exposant : ");
-  scanf("%" SCNu64,&E);
+  if (scanf("%" SCNu64,&E)!=1) { errno=EINVAL; return; }
   printf("\nEntrez le modulo : ");
-  scanf("%" SCNu64,&N);
+  if (scanf("%" SCNu64,&N)!=1) { errno=EINVAL; return; }
   key->E = E;
   key->N = N;
 }
