@@ -22,4 +22,9 @@ int base64_to_file(const char *in, const char *out);
 
 int test_base64(void);
 
+/* Les tableaux Base64 sont stricts ; les fichiers acceptent les espaces et retours ligne. */
+/* Les buffers retournes par encode/decode sont a liberer avec free(). */
+void build_decoding_table(void);
+void base64_cleanup(void);
+
 #endif

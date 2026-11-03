@@ -1,6 +1,6 @@
 # Makefile de la phase 1 (Nada). Les autres ajoutent leurs cibles ICI (ne pas créer un 2e Makefile).
 CC      = gcc
-CFLAGS  = -Wall -Wextra -std=gnu11 -g
+CFLAGS  = -Wall -Wextra -std=gnu11 -g -finput-charset=UTF-8 -fexec-charset=UTF-8
 COMMUN  = rsa_tools.o bezout.o keys_io.o log.o
 
 all: test_cles test_maxprime
@@ -11,7 +11,7 @@ test_cles: test_cles.o $(COMMUN)
 test_maxprime: test_maxprime.o $(COMMUN)
 	$(CC) $(CFLAGS) -o $@ $^
 
-%.o: %.c phase1.h ../rsa_common_header.h
+%.o: %.c phase1.h ../rsa_common_header.h ../../console_utf8.h Makefile
 	$(CC) $(CFLAGS) -c $< -o $@
 
 clean:

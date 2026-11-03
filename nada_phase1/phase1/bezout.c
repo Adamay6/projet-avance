@@ -29,10 +29,10 @@ int64_t bezout(uint64_t a,uint64_t b,int64_t *u,int64_t *v){
 	int64_t vp = 1;
 	int64_t rs,vs,us,q;
  	*u = 1; *v = 0;
-	assert(r == a*(*u)+b*(*v) && rp == a*up+b*vp);// invariant
+	assert((uint64_t)r == a*(*u)+b*(*v) && (uint64_t)rp == a*up+b*vp);// invariant
 	while (rp!=0){
     /// \invariant r = a*u+b*v et r' = a*u'+b*v'
-    assert(r == a*(*u)+b*(*v) && rp == a*up+b*vp);// invariant
+    assert((uint64_t)r == a*(*u)+b*(*v) && (uint64_t)rp == a*up+b*vp);// invariant
 		q = r/rp;
 		rs = r; us = *u; vs = *v;
 		r = rp; *u = up; *v = vp;
@@ -46,7 +46,7 @@ int64_t bezoutRSA(uint64_t a,uint64_t b,int64_t *u,int64_t *v){
   /// \brief le premier qui est supérieur à 2
   /// returns u
   int64_t r = bezout(a,b,u,v);
-  fprintf(logfp,"bezoutRSA : r = %lld U = %lld V = %lld\n",(long long)r,(long long)*u,(long long)*v);
+  if (logfp!=NULL) fprintf(logfp,"bezoutRSA : r = %lld U = %lld V = %lld\n",(long long)r,(long long)*u,(long long)*v);
   while (*u<=2){
     *u = *u+b;
   }

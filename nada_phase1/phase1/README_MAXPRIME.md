@@ -2,12 +2,15 @@
 
 ### Valeur de MAX_PRIME
 - Valeur par défaut (rsa_common_header.h) : **10000**. C'est la valeur retenue pour les tests courants.
-- Valeur maximale **sûre** : **65536**. Avec deux nombres premiers p et q inférieurs à 65536, N = p.q est
-  inférieur à 2^32. Or `puissance_mod_n` calcule `a*a` avant le `% n` : ça ne tient dans un `uint64_t`
-  que si a < 2^32, c'est-à-dire tant que N < 2^32 (4 294 967 296).
-- Au-delà, des clefs dont le module N dépasse 2^32 apparaissent et le déchiffrement devient faux.
+- Borne **sûre retenue** : **65536**. Avec deux nombres premiers p et q inférieurs à 65536, N = p.q est
+  inférieur à 2^32. Or `puissance_mod_n` calcule `a*a` avant le `% n` : le produit tient dans un
+  `uint64_t` pour tous les résidus si N <= 2^32 (4 294 967 296).
+- Au-delà, des clefs dont le module N dépasse 2^32 apparaissent et le déchiffrement peut devenir faux.
 
-### Mesures (programme `test_maxprime`, 2000 paires de clefs par ligne, chaque paire testée sur les 256 valeurs d'un octet)
+### Mesures initiales (programme `test_maxprime`, 2000 paires de clefs par ligne, chaque paire testée sur les 256 valeurs d'un octet)
+
+Ces relevés étaient déjà dans le dépôt avant la version commune. Ils sont conservés ici.
+Les nouveaux essais à graine fixe sont dans `tests/resultats_maxprime.txt`, à la racine du projet.
 
 | MAX_PRIME | N maximal observé | paires avec N >= 2^32 | paires en échec |
 |---|---|---|---|
@@ -23,10 +26,13 @@
 | 1 000 000 | 986 971 496 639 | 1 942 | 1 942 |
 | 5 000 000 | 24 882 081 958 121 | 1 994 | 1 994 |
 
-**Constat : le nombre de paires en échec est exactement le nombre de paires avec N >= 2^32.**
-Aucune paire avec N < 2^32 n'échoue, et toute paire avec N >= 2^32 échoue : le seuil de
-dépassement de capacité est donc N = 2^32, ce qui correspond à MAX_PRIME = 65536 environ.
-(Les nombres exacts varient un peu d'un lancement à l'autre car les tirages sont aléatoires.)
+**Constat sur cet échantillon : les deux compteurs sont égaux.**
+Cela ne veut pas dire que toutes les paires avec N > 2^32 échouent. Cette borne
+garantit l'absence de débordement en dessous ; au-dessus, il y a un risque.
+Par exemple, N = 4295229083, E = 5 et D = 2577058805 passent encore les 256 octets,
+alors que N > 2^32. Cette paire est reprise dans les tests de régression.
+La valeur 10000 reste retenue pour le fonctionnement courant. Les mesures dépendent
+du tirage aléatoire et de la plateforme ; la graine des nouveaux essais est 20261015.
 C'est ce dépassement qui justifie la phase 2 (GMP).
 
 ### Anomalies trouvées dans le code fourni et corrigées

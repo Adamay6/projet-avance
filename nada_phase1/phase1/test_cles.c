@@ -6,24 +6,46 @@
 ///                 ./test_cles 50000      (autre borne pour les nombres premiers)
 #include "../rsa_common_header.h"
 #include "phase1.h"
+#include <errno.h>
+#include <limits.h>
+#include "../../console_utf8.h"
+
+static int argument(const char *texte, uint64_t min, uint64_t max, uint64_t *n){
+  char *fin;
+  if (texte[0]<'0' || texte[0]>'9') return 0;
+  errno=0;
+  unsigned long long valeur=strtoull(texte,&fin,10);
+  if (errno==ERANGE || *fin!='\0' || valeur<min || valeur>max) return 0;
+  *n=(uint64_t)valeur;
+  return 1;
+}
 
 static int egales(const rsaKey_t *a, const rsaKey_t *b){
   return a->E == b->E && a->N == b->N;
 }
 
 int main(int argc, char *argv[]){
+  initialiser_console_utf8();
   uint64_t max_prime = MAX_PRIME;
-  if (argc > 1)
-    max_prime = strtoull(argv[1], NULL, 10);
+  uint64_t graine=(unsigned)time(NULL);
+  if (argc>3 || (argc>1 && !argument(argv[1],20,MAX_PRIME_PHASE1,&max_prime)) ||
+      (argc>2 && !argument(argv[2],0,UINT_MAX,&graine))){
+    fprintf(stderr,"usage : %s [max_prime entre 20 et 65536] [graine]\n",argv[0]);
+    return 2;
+  }
 
-  srand((unsigned) time(NULL));   // sans srand, rand() donne les MÊMES clefs à chaque lancement
+  srand((unsigned) graine);   // sans srand, rand() donne les MÊMES clefs à chaque lancement
   init_log();
   int erreurs = 0;
 
   /* ---- 1. génération et affichage d'une paire ---- */
   printf("=== 1. Génération d'une paire de clefs (nombres premiers < %" PRIu64 ") ===\n", max_prime);
   keyPair_t kp;
-  gen_keypair(&kp, max_prime);
+  if (gen_keypair(&kp, max_prime)!=0){
+    fprintf(stderr,"ECHEC : generation des clefs\n");
+    close_log();
+    return 1;
+  }
   print_keypair_hex(&kp);
 
   /* ---- 2. sauvegarde puis rechargement ---- */
@@ -65,7 +87,10 @@ int main(int argc, char *argv[]){
   int paires_fausses = 0;
   for (int i = 0; i < 1000; i++){
     keyPair_t k;
-    gen_keypair(&k, max_prime);
+    if (gen_keypair(&k, max_prime)!=0){
+      paires_fausses++;
+      continue;
+    }
     for (int octet = 0; octet < 256; octet++){
       uint64_t c = puissance_mod_n(octet, k.pubKey.E,  k.pubKey.N);
       uint64_t m = puissance_mod_n(c,     k.privKey.E, k.privKey.N);

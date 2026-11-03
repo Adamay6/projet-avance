@@ -1,0 +1,17 @@
+Releve de la version commune - 15 octobre 2026
+Windows x64, GCC 16.2.0, nouveau tirage random_uint
+Commande : make test-maxprime
+Les echecs au-dessus de la borne font partie de cette etude.
+
+Graine 20261015, 2000 paires par borne
+MAX_PRIME=1000       paires=2000  N_max=974069               paires_avec_N>2^32=0     paires_en_echec=0
+MAX_PRIME=10000      paires=2000  N_max=98525467             paires_avec_N>2^32=0     paires_en_echec=0
+MAX_PRIME=30000      paires=2000  N_max=882189809            paires_avec_N>2^32=0     paires_en_echec=0
+MAX_PRIME=60000      paires=2000  N_max=3527744191           paires_avec_N>2^32=0     paires_en_echec=0
+MAX_PRIME=65536      paires=2000  N_max=4120996261           paires_avec_N>2^32=0     paires_en_echec=0
+MAX_PRIME=70000      paires=2000  N_max=4735212037           paires_avec_N>2^32=15    paires_en_echec=15
+MAX_PRIME=80000      paires=2000  N_max=6251401703           paires_avec_N>2^32=108   paires_en_echec=108
+MAX_PRIME=100000     paires=2000  N_max=9817743569           paires_avec_N>2^32=401   paires_en_echec=401
+MAX_PRIME=200000     paires=2000  N_max=39506675413          paires_avec_N>2^32=1298  paires_en_echec=1298
+MAX_PRIME=1000000    paires=2000  N_max=987558547357         paires_avec_N>2^32=1943  paires_en_echec=1943
+MAX_PRIME=5000000    paires=2000  N_max=24776579212699       paires_avec_N>2^32=1998  paires_en_echec=1998

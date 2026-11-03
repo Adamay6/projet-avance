@@ -1,0 +1,16 @@
+build/
+/outils-locaux.txt
+/w64devkit/
+*.o
+*.obj
+*.d
+*.exe
+*.log
+*.key
+*.pyc
+__pycache__/
+.DS_Store
+test_cles
+test_maxprime
+test_phase1_3
+/phase1_malek/projet-avance/

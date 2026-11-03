@@ -1,9 +1,12 @@
-#ifndef PHASE1_H
-#define PHASE1_H
+#ifndef PHASE1_MALEK_H
+#define PHASE1_MALEK_H
 
-#include "rsa_common_header.h"
+#include "../nada_phase1/phase1/phase1.h"
+#include "../phase1_adam/chiffrement.h"
+#include "../phase1_loann/base64.h"
 
 // Affichage et gestion des clés
+// Les fonctions de ce fichier gardent 1 pour un succes, 0 pour un echec.
 void printKeyHex(rsaKey_t *key, const char *name);
 int saveKeyPair(const char *filename, keyPair_t *kp);
 int loadKeyPair(const char *filename, keyPair_t *kp);
@@ -17,6 +20,7 @@ int encryptFile(const char *fileIn, const char *fileOut, rsaKey_t *key);
 int decryptFile(const char *fileIn, const char *fileOut, rsaKey_t *key);
 
 // Conversions Base64 pour les fichiers
+// Ces deux fonctions sont celles de Loann : 0 pour un succes, -1 pour un echec.
 int file_to_base64(const char *fileIn, const char *fileOut);
 int base64_to_file(const char *fileIn, const char *fileOut);
 
