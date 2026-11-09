@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Compile et teste la phase 1 avec Python et GCC ou Clang."""
+"""Compile et teste les phases 1 et 2 avec Python et GCC ou Clang."""
 
 import argparse
 import base64
@@ -19,6 +19,7 @@ RSA = ["nada_phase1/phase1/" + name + ".c"
        for name in ("rsa_tools", "bezout", "keys_io", "log")]
 BASE64 = ["phase1_loann/base64.c", "phase1_loann/other_base64.c"]
 COMMUN = RSA + ["phase1_adam/chiffrement.c"] + BASE64
+GMP_RSA = ["phase2_nada/gmp_rsa.c", "phase2_nada/convert_bytes.c"]
 PROGRAMMES = {
     "test_phase1": COMMUN + ["phase1_adam/tests_chiffrement.c",
                            "phase1_loann/tests_base64.c",
@@ -30,7 +31,10 @@ PROGRAMMES = {
     "test_regressions": COMMUN + ["phase1_malek/phase1.c", "tests/test_regressions.c"],
     # Ce test inclut lui-meme keys_io.c et base64.c pour simuler les erreurs.
     "test_io_errors": [RSA[0], RSA[1], RSA[3], BASE64[1], "tests/test_io_errors.c"],
+    "test_gmp_rsa": RSA + GMP_RSA + ["phase2_nada/tests_gmp_rsa.c"],
 }
+# Programmes de la phase 2 qui ont besoin de la bibliotheque GMP.
+AVEC_GMP = {"test_gmp_rsa"}
 
 
 def configurer_affichage_utf8():
@@ -71,8 +75,28 @@ def compilateur():
     raise RuntimeError("GCC ou Clang est introuvable. Voir les installations dans README.md.")
 
 
+def options_gmp():
+    """Renvoie les options -I et -L de GMP, prises dans GMP_PREFIX ou chez Homebrew."""
+    prefixe = os.environ.get("GMP_PREFIX")
+    if prefixe is None:
+        brew = shutil.which("brew")
+        if brew:
+            resultat = subprocess.run([brew, "--prefix", "gmp"], capture_output=True,
+                                      text=True, timeout=30)
+            if resultat.returncode == 0:
+                prefixe = resultat.stdout.strip()
+    if not prefixe:
+        return [], []
+    prefixe = Path(prefixe.strip('"'))
+    if os.name == "nt":
+        # La DLL de GMP doit etre trouvee au lancement des tests.
+        os.environ["PATH"] = os.pathsep.join([os.environ.get("PATH", ""), str(prefixe / "bin")])
+    return ["-I", str(prefixe / "include")], ["-L", str(prefixe / "lib")]
+
+
 def compiler(noms):
     cc = compilateur()
+    gmp_include, gmp_lib = options_gmp() if AVEC_GMP & set(noms) else ([], [])
     subprocess.run(cc + ["--version"], check=True, timeout=30)
     BIN.mkdir(parents=True, exist_ok=True)
     for nom in noms:
@@ -80,10 +104,21 @@ def compiler(noms):
         commande = cc + ["-std=c11", "-O2", "-Wall", "-Wextra", "-Wpedantic", "-Werror",
                          "-finput-charset=UTF-8", "-fexec-charset=UTF-8",
                          "-I", str(ROOT)]
+        if nom in AVEC_GMP:
+            commande += gmp_include
         commande += [str(ROOT / source) for source in PROGRAMMES[nom]]
+        if nom in AVEC_GMP:
+            # Les bibliotheques viennent apres les sources pour l'editeur de liens GNU.
+            commande += gmp_lib + ["-lgmp"]
         commande += ["-o", str(BIN / (nom + EXT))]
         # On recompile pour ne pas reutiliser un executable d'un autre ordinateur.
-        subprocess.run(commande, cwd=ROOT, check=True, timeout=180)
+        try:
+            subprocess.run(commande, cwd=ROOT, check=True, timeout=180)
+        except subprocess.CalledProcessError:
+            if nom in AVEC_GMP:
+                print("\nGMP est-elle installee ? Voir la section phase 2 du README "
+                      "(variable GMP_PREFIX).", file=sys.stderr, flush=True)
+            raise
 
 
 def lancer(nom, dossier, *arguments, **options):
@@ -121,6 +156,8 @@ def tester():
     lancer("test_regressions", "regressions")
     lancer("test_io_errors", "io")
     print("\nTous les tests de la phase 1 sont passes.", flush=True)
+    lancer("test_gmp_rsa", "gmp")
+    print("\nTous les tests de la phase 2 sont passes.", flush=True)
 
 
 def etude_maxprime():
