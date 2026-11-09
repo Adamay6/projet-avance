@@ -5,6 +5,9 @@
 #include <inttypes.h>   // PRIx64, SCNu64... pour afficher / lire des uint64_t proprement
 #include "../rsa_common_header.h"
 
+#define MAX_PRIME_PHASE1 UINT64_C(65536)
+#define MAX_PRIME_ETUDE UINT64_C(5000000)
+
 /* ---------- rsa_tools.c (fourni) ---------- */
 void     erreur(char *msg);
 uint64_t random_uint(uint64_t min, uint64_t max);
@@ -25,13 +28,14 @@ int64_t bezout(uint64_t a, uint64_t b, int64_t *u, int64_t *v);
 int64_t bezoutRSA(uint64_t a, uint64_t b, int64_t *u, int64_t *v);
 
 /* ---------- log.c (Nada) ---------- */
-void init_log(void);    // à appeler au début de TOUT main (sinon logfp est NULL et ça plante)
+void init_log(void);    // à appeler au début de TOUT main pour conserver les traces
 void close_log(void);
 
 /* ---------- keys_io.c (Nada) ---------- */
 void print_key_hex(const char *label, const rsaKey_t *key);
 void print_keypair_hex(const keyPair_t *kp);
-void gen_keypair(keyPair_t *kp, uint64_t max_prime);
+int  gen_keypair(keyPair_t *kp, uint64_t max_prime);       // 0 = ok, -1 = borne invalide
+int  keypair_valide(const keyPair_t *kp);
 int  save_keypair(const char *path, const keyPair_t *kp);   // 0 = ok, -1 = erreur
 int  load_keypair(const char *path, keyPair_t *kp);         // 0 = ok, -1 = erreur
 

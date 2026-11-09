@@ -1,5 +1,5 @@
 CC = gcc
-CFLAGS = -Wall -Wextra -std=c11 -I. -I../phase1_nada
+CFLAGS = -Wall -Wextra -std=c11 -I. -I../nada_phase1 -finput-charset=UTF-8 -fexec-charset=UTF-8
 LDFLAGS = 
 
 EXEC = test_phase1_3
@@ -17,7 +17,7 @@ all: $(EXEC)
 $(EXEC): $(OBJS)
 	$(CC) $(OBJS) -o $@ $(LDFLAGS)
 
-$(OBJ_DIR)/%.o: %.c
+$(OBJ_DIR)/%.o: %.c base64.h ../console_utf8.h Makefile
 	@mkdir -p $(dir $@)
 	$(CC) $(CFLAGS) -c $< -o $@
 

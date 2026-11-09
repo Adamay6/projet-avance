@@ -2,7 +2,7 @@
 #define CHIFFREMENT_PHASE1_H
 
 #include <stddef.h>
-#include "../rsa_common_header.h"
+#include "../nada_phase1/rsa_common_header.h"
 
 /* Un octet clair donne un entier RSA encode sur 8 octets little endian. */
 #define RSA_OCTET_CHIFFRE_TAILLE 8u

@@ -1,0 +1,37 @@
+name: Tests phase 1
+
+on: [push, pull_request, workflow_dispatch]
+
+permissions:
+  contents: read
+
+jobs:
+  phase1:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            cc: gcc
+          - os: macos-15-intel
+            cc: clang
+          - os: windows-latest
+            cc: gcc
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    env:
+      CC: ${{ matrix.cc }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: '3.12'
+      - name: Compiler et tester depuis une copie propre
+        run: python tests/test_lancement.py
+      - name: Verifier aussi le Makefile
+        if: runner.os != 'Windows'
+        run: make test CC=${{ matrix.cc }}
+      - name: Relancer l'etude MAX_PRIME
+        run: python tester.py test-maxprime
