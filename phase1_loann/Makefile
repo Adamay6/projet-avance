@@ -1,5 +1,5 @@
 CC = gcc
-CFLAGS = -Wall -Wextra -std=c11 -I. -I../nada_phase1 -finput-charset=UTF-8 -fexec-charset=UTF-8
+CFLAGS = -Wall -Wextra -std=c11 -I. -I../phase1_nada -finput-charset=UTF-8 -fexec-charset=UTF-8
 LDFLAGS = 
 
 EXEC = test_phase1_3

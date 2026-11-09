@@ -42,7 +42,7 @@ static int close_test(FILE *f) {
 #define fprintf print_test
 #define fclose close_test
 #include "../phase1_loann/base64.c"
-#include "../nada_phase1/phase1/keys_io.c"
+#include "../phase1_nada/phase1/keys_io.c"
 #undef fread
 #undef fwrite
 #undef fprintf

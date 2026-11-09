@@ -15,7 +15,7 @@ BUILD = ROOT / "build"
 BIN = BUILD / "bin"
 EXT = ".exe" if os.name == "nt" else ""
 
-RSA = ["nada_phase1/phase1/" + name + ".c"
+RSA = ["phase1_nada/phase1/" + name + ".c"
        for name in ("rsa_tools", "bezout", "keys_io", "log")]
 BASE64 = ["phase1_loann/base64.c", "phase1_loann/other_base64.c"]
 COMMUN = RSA + ["phase1_adam/chiffrement.c"] + BASE64
@@ -23,8 +23,8 @@ PROGRAMMES = {
     "test_phase1": COMMUN + ["phase1_adam/tests_chiffrement.c",
                            "phase1_loann/tests_base64.c",
                            "phase1_malek/phase1.c", "phase1_malek/main_phase1.c"],
-    "test_cles": RSA + ["nada_phase1/phase1/test_cles.c"],
-    "test_maxprime": RSA + ["nada_phase1/phase1/test_maxprime.c"],
+    "test_cles": RSA + ["phase1_nada/phase1/test_cles.c"],
+    "test_maxprime": RSA + ["phase1_nada/phase1/test_maxprime.c"],
     "test_base64": BASE64 + ["phase1_loann/tests_base64.c",
                            "phase1_loann/main_test_loann.c"],
     "test_regressions": COMMUN + ["phase1_malek/phase1.c", "tests/test_regressions.c"],

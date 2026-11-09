@@ -1,5 +1,5 @@
-#include "../nada_phase1/rsa_common_header.h"
-#include "../nada_phase1/phase1/phase1.h"
+#include "../phase1_nada/rsa_common_header.h"
+#include "../phase1_nada/phase1/phase1.h"
 #include "base64.h"
 #include <stdio.h>
 #include <stdlib.h>

@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "../nada_phase1/rsa_common_header.h"
+#include "../phase1_nada/rsa_common_header.h"
 #include "phase1.h"
 
 // Déclarations externes des fonctions de base64 si besoin (ou inclus via header si dispo)
