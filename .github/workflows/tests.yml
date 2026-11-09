@@ -28,6 +28,16 @@ jobs:
       - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
           python-version: '3.12'
+      - name: Installer GMP pour la phase 2
+        shell: bash
+        run: |
+          case "$RUNNER_OS" in
+            Linux) sudo apt-get update && sudo apt-get install -y libgmp-dev ;;
+            macOS) brew install gmp ;;
+            Windows)
+              C:/msys64/usr/bin/pacman.exe -S --noconfirm --needed mingw-w64-x86_64-gmp
+              echo 'GMP_PREFIX=C:\msys64\mingw64' >> "$GITHUB_ENV" ;;
+          esac
       - name: Compiler et tester depuis une copie propre
         run: python tests/test_lancement.py
       - name: Verifier aussi le Makefile
