@@ -1,4 +1,4 @@
-# DIYPG — phase 1
+# DIYPG — phases 1 et 2
 
 Version commune des parties de Nada, Adam, Loann et Malek. Le point de départ est le commit `3772eaba` de la branche `phase1`.
 
@@ -11,15 +11,15 @@ git clone --branch phase1-commune https://github.com/nadaaraba/projet-avance.git
 cd projet-avance
 ```
 
-La branche `phase1-commune` contient la version commune proposée au groupe. Son intégration à `phase1` se fait après relecture.
+La branche `phase1-commune` contient la version commune proposée au groupe. Son intégration à `phase1` se fait après relecture. La phase 2 est développée sur la branche `phase2`, partie de `phase1-commune` (voir [Phase 2 — RSA avec GMP](#phase-2--rsa-avec-gmp)).
 
 ## Compiler et tester
 
-Le lanceur utilise **Python 3.9 ou plus** et un compilateur **GCC ou Clang**. Python sert seulement à compiler et lancer les tests ; le projet reste en C. Aucun module Python supplémentaire n'est nécessaire. Make et les commandes Unix sont facultatifs avec ce lanceur.
+Le lanceur utilise **Python 3.9 ou plus**, un compilateur **GCC ou Clang** et, depuis la phase 2, la bibliothèque **GMP**. Python sert seulement à compiler et lancer les tests ; le projet reste en C. Aucun module Python supplémentaire n'est nécessaire. Make et les commandes Unix sont facultatifs avec ce lanceur.
 
 ### Windows
 
-Installer [Python 3](https://www.python.org/downloads/) avec son lanceur `py`, puis télécharger [w64devkit](https://github.com/skeeto/w64devkit/releases). Extraire les outils de façon à avoir `projet-avance/w64devkit/bin/gcc.exe`. Ce dossier est détecté automatiquement et ignoré par Git. Un GCC déjà présent dans le PATH convient aussi.
+Installer [Python 3](https://www.python.org/downloads/) avec son lanceur `py`, puis télécharger [w64devkit](https://github.com/skeeto/w64devkit/releases). Extraire les outils de façon à avoir `projet-avance/w64devkit/bin/gcc.exe`. Ce dossier est détecté automatiquement et ignoré par Git. Un GCC déjà présent dans le PATH convient aussi. Pour GMP, voir [Installer GMP](#installer-gmp).
 
 Dans PowerShell :
 
@@ -33,7 +33,7 @@ Sur Ubuntu ou Debian, installer les outils une fois :
 
 ```sh
 sudo apt update
-sudo apt install build-essential python3
+sudo apt install build-essential python3 libgmp-dev
 ```
 
 Puis lancer :
@@ -44,7 +44,7 @@ python3 tester.py
 
 ### macOS
 
-Installer les outils de compilation Apple avec `xcode-select --install`, puis [Python 3](https://www.python.org/downloads/macos/) si `python3` n'est pas disponible. Lancer ensuite :
+Installer les outils de compilation Apple avec `xcode-select --install`, puis [Python 3](https://www.python.org/downloads/macos/) si `python3` n'est pas disponible, et GMP avec [Homebrew](https://brew.sh) : `brew install gmp`. Lancer ensuite :
 
 ```sh
 python3 tester.py
@@ -91,7 +91,8 @@ Les exécutables sont dans `build/bin` :
 - `test_base64` : tests de Loann seuls ;
 - `test_regressions` : cas limites et aller-retour complet RSA/Base64 ;
 - `test_io_errors` : erreurs de lecture, d'écriture et de fermeture simulées ;
-- `test_maxprime` : étude du dépassement de capacité.
+- `test_maxprime` : étude du dépassement de capacité ;
+- `test_gmp_rsa` : phase 2, puissance modulaire GMP, clefs avec N > 2^32 et chiffrement de blocs de 4 octets.
 
 Sous Windows, les noms finissent par `.exe`. Le main crée ses fichiers dans le dossier depuis lequel il est lancé : utiliser le lanceur ou `make test` permet de garder tous ces fichiers dans `build/tests`. La commande `clean` enlève uniquement le dossier `build`.
 
@@ -108,6 +109,7 @@ Le workflow GitHub Actions compile et teste sur Windows avec GCC, Linux avec GCC
 - `phase1_loann/` : Base64 des tableaux et fichiers, avec ses tests.
 - `phase1_malek/` : main commun et fonctions d'appel aux autres modules.
 - `tests/` : cas ajoutés après l'audit et relevé des nouvelles mesures.
+- `phase2_nada/` : phase 2, RSA avec GMP et blocs de 4 octets (voir plus bas).
 
 Les changements par rapport au dépôt de départ sont notés dans [MODIFICATIONS.md](MODIFICATIONS.md). Les commentaires des parties conservées ont été gardés.
 
@@ -168,3 +170,51 @@ Les essais couvrent les clefs générées, les valeurs connues RSA/Base64, les 2
 Les tests de fichiers écrivent uniquement leurs données d'essai dans `build/tests` quand ils sont lancés par le Makefile. Les programmes de test renvoient un code non nul si un contrôle échoue.
 
 La suite a été exécutée localement sous Windows x64 avec GCC 16.2.0. Les résultats des vérifications Windows, Linux et macOS sont à consulter dans l'onglet Actions du dépôt pour le commit testé.
+
+## Phase 2 — RSA avec GMP
+
+### Partie de Nada : `phase2_nada/`
+
+Un bloc de 4 octets vaut jusqu'à 2^32 - 1, il faut donc N > 2^32. Dans cette zone, `a * a` déborde sur 64 bits et `puissance_mod_n` de la phase 1 se trompe (l'étude MAX_PRIME le montre). La phase 2 fait les calculs avec GMP ; les clefs restent des `rsaKey_t` (E et N sur 64 bits).
+
+| Fichier | Contenu |
+|---|---|
+| `gmp_rsa.h`, `gmp_rsa.c` | `puissance_mod_n_gmp` (signature du sujet, `mpz_powm`), `gen_keys_gmp` (p et q de 17 à 31 bits, donc 2^32 < N < 2^64), `chiffrer_bloc_gmp`, `dechiffrer_bloc_gmp` |
+| `convert_bytes.h`, `convert_bytes.c` | `convert4byte2int` et `convertInt2uchar`, en **little endian** : `{0x78, 0x56, 0x34, 0x12}` donne `0x12345678` |
+| `tests_gmp_rsa.c` | comparaison avec la phase 1 pour N ≤ 2^32, débordement de la phase 1 au-delà, ordre des octets, clefs, aller-retour des blocs, erreurs |
+
+Les fonctions renvoient les codes d'Adam définis dans `phase1_adam/chiffrement.h` : `RSA_SUCCES`, `RSA_ERREUR_PARAMETRE`, `RSA_ERREUR_CLE` et `RSA_ERREUR_CHIFFRE`. Un bloc chiffré est un entier inférieur à N, stocké sur 8 octets (`RSA_BLOC_CHIFFRE_TAILLE`). Le générateur aléatoire de GMP utilisé pour les clefs n'est pas cryptographique.
+
+Le sujet indique que les deux fonctions de conversion sont fournies sur Moodle. Ce fichier n'étant pas dans le dépôt, `convert_bytes.c` les remplace ; s'il est ajouté, supprimer `convert_bytes.c` et garder ses prototypes.
+
+### Installer GMP
+
+| Système | Commande |
+|---|---|
+| Ubuntu / Debian | `sudo apt install libgmp-dev` |
+| macOS (Homebrew) | `brew install gmp` |
+| Windows (MSYS2) | installer [MSYS2](https://www.msys2.org), puis dans son terminal : `pacman -S mingw-w64-x86_64-gmp` |
+
+Les en-têtes et la bibliothèque sont cherchés dans les chemins par défaut du compilateur. Sinon, la variable facultative `GMP_PREFIX` indique le dossier qui contient `include/gmp.h` et `lib/` :
+
+- sous macOS, si `GMP_PREFIX` n'est pas définie, le lanceur et le Makefile utilisent `brew --prefix gmp` ;
+- sous Windows, `tester.cmd` utilise `C:\msys64\mingw64` si GMP y est installée, et ajoute son dossier `bin` au PATH pour trouver la DLL au lancement des tests ;
+- ailleurs, par exemple : `GMP_PREFIX=/opt/gmp python3 tester.py` ou `make test GMP_PREFIX=/opt/gmp`.
+
+### Lancer les tests
+
+Les tests de la phase 2 sont compris dans les commandes habituelles, après ceux de la phase 1 :
+
+```sh
+python3 tester.py        # ou .\tester.cmd sous Windows
+make test
+```
+
+Pour ne compiler et lancer que la phase 2 avec le Makefile :
+
+```sh
+make build/bin/test_gmp_rsa
+mkdir -p build/tests/gmp && cd build/tests/gmp && ../../bin/test_gmp_rsa
+```
+
+Si GMP est introuvable, la compilation de `test_gmp_rsa` échoue et le lanceur renvoie vers cette section. Le workflow GitHub installe GMP sur les trois systèmes avant les tests.
