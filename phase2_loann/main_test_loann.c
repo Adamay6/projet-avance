@@ -7,12 +7,19 @@
 #include "../phase1_loann/base64.h"
 #include "../console_utf8.h"
 
+/* Le mot de passe d'application n'est jamais ecrit dans le code : il est lu dans
+ * DIYPG_SMTP_PASSWORD. Sans cette variable, l'envoi est ignore (pas d'echec). */
 int exemple_envoi(void) {
+    const char *mot_de_passe = getenv("DIYPG_SMTP_PASSWORD");
+    if (mot_de_passe == NULL || mot_de_passe[0] == '\0') {
+        printf("ignoré (DIYPG_SMTP_PASSWORD non définie)\n");
+        return 0;
+    }
     email_config_t mail_cfg = {
         .smtp_server = "smtp.gmail.com",
         .smtp_port = "587",
         .username = "diypg.gproj@gmail.com",
-        .password = "bhir qlzd dpyq amvj",
+        .password = mot_de_passe,
         .from = "diypg.gproj@gmail.com",
         .to = "mloann2802@gmail.com"
     };
@@ -104,7 +111,7 @@ int main(void) {
         }
     }
 
-    printf("[4/4] Evoie par mail... ");
+    printf("[4/4] Envoi par mail... ");
 
     if(exemple_envoi()) success = 0;
 
