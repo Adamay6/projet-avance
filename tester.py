@@ -11,6 +11,7 @@ import subprocess
 import sys
 
 from phase2_adam.tester_phase2 import verifier_reference
+from phase3_adam.tester_contacts import reference_python as verifier_contacts
 
 ROOT = Path(__file__).resolve().parent
 BUILD = ROOT / "build"
@@ -25,6 +26,8 @@ GMP_RSA = ["phase2_nada/gmp_rsa.c", "phase2_nada/convert_bytes.c"]
 FICHIERS_BLOCS = ["phase2_adam/chiffrement_blocs.c", "phase2_adam/fichiers_gmp.c"]
 BASE64_V2 = ["phase2_loann/base64_v2.c"]
 COMMANDES_NADA = ["phase3_nada/table_clefs_provisoire.c", "phase3_nada/commandes_nada.c"]
+CONTACTS_ADAM = ["phase3_adam/contacts.c", "phase3_adam/contacts_io.c",
+                 "phase3_adam/contacts_commandes.c"]
 PROGRAMMES = {
     "test_phase1": COMMUN + ["phase1_adam/tests_chiffrement.c",
                            "phase1_loann/tests_base64.c",
@@ -43,6 +46,10 @@ PROGRAMMES = {
                         ["phase2_loann/base64_v2.c", "tests/test_phase2_loann.c"],
     "test_commandes_nada": RSA + GMP_RSA + FICHIERS_BLOCS + BASE64 + BASE64_V2 + COMMANDES_NADA
                            + ["phase3_nada/tests_commandes_nada.c"],
+    "test_contacts": CONTACTS_ADAM + ["phase3_adam/contacts_interpreteur.c",
+                                     "phase3_adam/tests/test_contacts.c"],
+    "test_contacts_memoire": ["phase3_adam/tests/test_contacts_memoire.c"],
+    "rejouer_contacts": CONTACTS_ADAM + ["phase3_adam/tests/rejouer_contacts.c"],
 }
 # Programmes des phases 2 et 3 qui ont besoin de la bibliotheque GMP.
 AVEC_GMP = {"test_gmp_rsa", "test_fichiers_blocs", "test_phase2_loann", "test_commandes_nada"}
@@ -175,6 +182,11 @@ def tester():
     lancer("test_phase2_loann", "phase2_loann")
     print("\nTous les tests de la phase 2 sont passes.", flush=True)
     lancer("test_commandes_nada", "phase3")
+    lancer("test_contacts", "phase3_adam")
+    lancer("test_contacts_memoire", "phase3_adam")
+    lancer("rejouer_contacts", "phase3_adam", ROOT / "phase3_adam/tests/scenario_contacts.txt")
+    verifier_contacts(BUILD / "tests/phase3_adam/contacts_reference.bin")
+    print("Phase 3 (Adam) : tous les tests sont OK.", flush=True)
     print("\nTous les tests de la phase 3 sont passes.", flush=True)
 
 
