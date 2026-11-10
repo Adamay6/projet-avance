@@ -34,7 +34,7 @@ static unsigned int controles = 0, echecs = 0;
 int main(void)
 {
     annuaire_contacts_t source = {NULL}, garde = {NULL};
-    rsaKey_t cle = {17, 3233};
+    rsaKey_t cle = {65537, UINT64_C(4295229443)};   /* clef crypt : N > 2^32 - 1 */
     FILE *f;
     size_t initiales;
     initialiser_console_utf8();

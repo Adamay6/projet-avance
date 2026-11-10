@@ -22,8 +22,7 @@ int main(int argc, char **argv)
         if (resultat != EXIT_SUCCESS) break;
         if (nombre == 0) continue;
         if (strcmp(arguments[0], "quit") == 0) break;
-        int code = contacts_executer(&annuaire, arguments[0], (int)nombre - 1,
-                                     arguments + 1, entree, stdout);
+        int code = contacts_executer(&annuaire, (int)nombre, arguments, entree, stdout);
         if (code != 0) {
             fprintf(stderr, "%s : %s\n", arguments[0], contacts_message_erreur(code));
             resultat = EXIT_FAILURE;

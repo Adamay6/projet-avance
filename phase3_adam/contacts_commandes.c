@@ -112,14 +112,18 @@ static int ajouter_cle(annuaire_contacts_t *annuaire, const char *contact,
     return contacts_ajouter_cle(annuaire, contact, id, type_cle, &cle);
 }
 
-int contacts_executer(annuaire_contacts_t *annuaire, const char *commande,
-                     int argc, const char *const argv[], FILE *entree, FILE *sortie)
+int contacts_executer(annuaire_contacts_t *annuaire, int argc_total,
+                     const char *const argv_total[], FILE *entree, FILE *sortie)
 {
-    if (annuaire == NULL || commande == NULL || argc < 0 ||
-        (argc != 0 && argv == NULL) || entree == NULL || sortie == NULL)
+    if (annuaire == NULL || argc_total < 1 || argv_total == NULL ||
+        entree == NULL || sortie == NULL)
         return CONTACTS_ERREUR_PARAMETRE;
-    for (int i = 0; i < argc; ++i)
-        if (argv[i] == NULL) return CONTACTS_ERREUR_PARAMETRE;
+    for (int i = 0; i < argc_total; ++i)
+        if (argv_total[i] == NULL) return CONTACTS_ERREUR_PARAMETRE;
+    /* argv_total[0] est le nom de la commande ; la suite traite seulement ses arguments. */
+    const char *commande = argv_total[0];
+    int argc = argc_total - 1;
+    const char *const *argv = argv_total + 1;
     if (strcmp(commande, "listcontacts") == 0) {
         if (argc > 2) return CONTACTS_ERREUR_PARAMETRE;
         return contacts_afficher(annuaire, argc > 0 ? argv[0] : NULL,

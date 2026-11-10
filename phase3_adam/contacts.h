@@ -7,20 +7,21 @@
 #define CONTACT_COMMENTAIRE_TAILLE 512u
 
 typedef enum { CONTACT_CRYPT = 1, CONTACT_SIGN = 2 } contact_type_cle_t;
+/* Erreurs a partir de -20 : pas de collision avec RSA_* (-1 a -5) ni CMD_* (-10 a -14). */
 typedef enum {
     CONTACTS_SUCCES = 0,
     CONTACTS_COMMANDE_INCONNUE = 1,
-    CONTACTS_ERREUR_PARAMETRE = -1,
-    CONTACTS_ERREUR_IDENTIFIANT = -2,
-    CONTACTS_ERREUR_INTROUVABLE = -3,
-    CONTACTS_ERREUR_DOUBLON = -4,
-    CONTACTS_ERREUR_MEMOIRE = -5,
-    CONTACTS_ERREUR_FICHIER = -6,
-    CONTACTS_ERREUR_FORMAT = -7,
-    CONTACTS_ERREUR_TYPE = -8,
-    CONTACTS_ERREUR_AMBIGU = -9,
-    CONTACTS_ERREUR_SAISIE = -10,
-    CONTACTS_ERREUR_PRIVEE = -11
+    CONTACTS_ERREUR_PARAMETRE = -20,
+    CONTACTS_ERREUR_IDENTIFIANT = -21,
+    CONTACTS_ERREUR_INTROUVABLE = -22,
+    CONTACTS_ERREUR_DOUBLON = -23,
+    CONTACTS_ERREUR_MEMOIRE = -24,
+    CONTACTS_ERREUR_FICHIER = -25,
+    CONTACTS_ERREUR_FORMAT = -26,
+    CONTACTS_ERREUR_TYPE = -27,
+    CONTACTS_ERREUR_AMBIGU = -28,
+    CONTACTS_ERREUR_SAISIE = -29,
+    CONTACTS_ERREUR_PRIVEE = -30
 } contacts_resultat_t;
 
 typedef struct {
@@ -37,7 +38,8 @@ typedef struct {
 } contact_cle_t;
 
 typedef struct contact_s contact_t;
-typedef struct { contact_t *premier; } annuaire_contacts_t;
+/* Struct nommee pour que interpreteur.h puisse la declarer sans inclure ce fichier. */
+typedef struct annuaire_contacts_s { contact_t *premier; } annuaire_contacts_t;
 
 /* L'annuaire doit etre initialise avant usage et libere a la fin. */
 void contacts_initialiser(annuaire_contacts_t *annuaire);
@@ -55,12 +57,17 @@ int contacts_supprimer(annuaire_contacts_t *annuaire, const char *id);
 const contact_infos_t *contacts_trouver(const annuaire_contacts_t *annuaire,
                                        const char *id);
 
-/* Un nom de famille doit identifier un seul contact ; l'identifiant est prioritaire. */
+/* Un nom de famille doit identifier un seul contact ; l'identifiant est prioritaire.
+ * Une clef crypt doit avoir N > 2^32 - 1 : le chiffrement par blocs de 4 octets l'exige. */
 int contacts_ajouter_cle(annuaire_contacts_t *annuaire, const char *contact_ou_nom,
                         const char *id_cle, contact_type_cle_t type,
                         const rsaKey_t *publique);
 int contacts_supprimer_cle(annuaire_contacts_t *annuaire, const char *reference);
-/* Les sorties sont laissees intactes en cas d'erreur. */
+/*
+ * reference = "contact/clef", ou "contact" seul si le contact a une seule clef (sujet V2).
+ * CONTACTS_ERREUR_AMBIGU si "contact" seul a plusieurs clefs.
+ * Les sorties sont laissees intactes en cas d'erreur.
+ */
 int contacts_lire_cle(const annuaire_contacts_t *annuaire, const char *reference,
                      contact_cle_t *cle);
 int contacts_resoudre(const annuaire_contacts_t *annuaire, const char *reference,
@@ -77,14 +84,14 @@ int contacts_sauver(FILE *sortie, const annuaire_contacts_t *annuaire);
 int contacts_charger(FILE *entree, annuaire_contacts_t *annuaire);
 
 /*
- * Raccordement a l'interpreteur, apres son decoupage de la ligne :
- * commande est le nom ; argc/argv contiennent seulement ses arguments.
+ * Raccordement a l'interpreteur, apres son decoupage de la ligne. Meme convention que
+ * commande_t (interpreteur.h) : argv[0] est le nom de la commande, comme pour main.
  * Gere les commandes V2 et rmkeys/show pour une reference contact/clef.
  * Les autres commandes renvoient CONTACTS_COMMANDE_INCONNUE (1).
  * Les menus utilisent les flux fournis, ce qui permet de rejouer un script.
  */
-int contacts_executer(annuaire_contacts_t *annuaire, const char *commande,
-                     int argc, const char *const argv[], FILE *entree, FILE *sortie);
+int contacts_executer(annuaire_contacts_t *annuaire, int argc, const char *const argv[],
+                     FILE *entree, FILE *sortie);
 const char *contacts_message_erreur(int resultat);
 
 #endif

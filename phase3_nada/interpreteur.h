@@ -26,10 +26,14 @@ typedef struct {
     bool a_priv;   /* false pour une clef publique importee : pas de clef privee */
 } entree_clef_t;
 
+struct annuaire_contacts_s;   /* annuaire des contacts V2 (phase3_adam/contacts.h) */
+
 typedef struct {
     entree_clef_t *entrees;
     size_t nb;
     size_t capacite;
+    /* V2 : clefs publiques des contacts, pour crypt fichier fichier contact/clef. NULL sans contacts. */
+    const struct annuaire_contacts_s *contacts;
 } table_clefs_t;
 
 /*
@@ -41,7 +45,8 @@ typedef enum {
     CMD_ERREUR_SYNTAXE = -10,        /* mauvais nombre d'arguments */
     CMD_ERREUR_ID_INCONNU = -11,     /* identificateur absent de la table */
     CMD_ERREUR_TYPE = -12,           /* clef sign donnee a crypt, etc. */
-    CMD_ERREUR_PAS_DE_PRIVEE = -13   /* commande qui a besoin de la clef privee */
+    CMD_ERREUR_PAS_DE_PRIVEE = -13,  /* commande qui a besoin de la clef privee */
+    CMD_ERREUR_AMBIGU = -14          /* contact seul avec plusieurs clefs : preciser contact/clef */
 } cmd_resultat_t;
 
 /*

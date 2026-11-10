@@ -11,6 +11,7 @@ int contacts_resoudre_entree(const annuaire_contacts_t *annuaire, const char *re
     int resultat = contacts_lire_cle(annuaire, reference, &cle);
     if (resultat == CONTACTS_ERREUR_INTROUVABLE) return CMD_ERREUR_ID_INCONNU;
     if (resultat == CONTACTS_ERREUR_IDENTIFIANT) return CMD_ERREUR_SYNTAXE;
+    if (resultat == CONTACTS_ERREUR_AMBIGU) return CMD_ERREUR_AMBIGU;
     if (resultat != CONTACTS_SUCCES) return RSA_ERREUR_PARAMETRE;
 
     entree_clef_t publique = {

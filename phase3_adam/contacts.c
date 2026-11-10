@@ -172,6 +172,8 @@ int contacts_ajouter_cle(annuaire_contacts_t *annuaire, const char *contact_ou_n
     if (type != CONTACT_CRYPT && type != CONTACT_SIGN) return CONTACTS_ERREUR_TYPE;
     if (publique->N <= 1 || publique->E == 0 || publique->E >= publique->N)
         return CONTACTS_ERREUR_PARAMETRE;
+    /* Sinon crypt refuserait la clef plus tard (blocs de 4 octets : N > 2^32 - 1). */
+    if (type == CONTACT_CRYPT && publique->N <= UINT32_MAX) return CONTACTS_ERREUR_PARAMETRE;
     resultat = contacts_chercher_id_ou_nom(annuaire, contact_ou_nom, &contact);
     if (resultat != 0) return resultat;
     for (fin = &contact->cles; *fin != NULL; fin = &(*fin)->suivant)
@@ -205,13 +207,27 @@ int contacts_supprimer_cle(annuaire_contacts_t *annuaire, const char *reference)
     return CONTACTS_ERREUR_INTROUVABLE;
 }
 
+/* "contact" seul (sans '/') : la clef est designee sans ambiguite si le contact n'en a qu'une. */
+static int lire_cle_unique(const annuaire_contacts_t *annuaire, const char *id,
+                           contact_cle_t *cle)
+{
+    contact_t *contact;
+    if (!contacts_identifiant_valide(id)) return CONTACTS_ERREUR_IDENTIFIANT;
+    contact = chercher(annuaire, id);
+    if (contact == NULL || contact->cles == NULL) return CONTACTS_ERREUR_INTROUVABLE;
+    if (contact->cles->suivant != NULL) return CONTACTS_ERREUR_AMBIGU;
+    *cle = contact->cles->infos;
+    return CONTACTS_SUCCES;
+}
+
 int contacts_lire_cle(const annuaire_contacts_t *annuaire, const char *reference,
                      contact_cle_t *cle)
 {
     char id[NAME_MAX_SIZE + 1], id_cle[NAME_MAX_SIZE + 1];
     contact_t *contact;
     int resultat;
-    if (annuaire == NULL || cle == NULL) return CONTACTS_ERREUR_PARAMETRE;
+    if (annuaire == NULL || cle == NULL || reference == NULL) return CONTACTS_ERREUR_PARAMETRE;
+    if (strchr(reference, '/') == NULL) return lire_cle_unique(annuaire, reference, cle);
     resultat = decouper_reference(reference, id, id_cle);
     if (resultat != 0) return resultat;
     contact = chercher(annuaire, id);
@@ -273,7 +289,7 @@ const char *contacts_message_erreur(int resultat)
     switch (resultat) {
     case CONTACTS_SUCCES: return "Succès.";
     case CONTACTS_COMMANDE_INCONNUE: return "Commande non gérée par le module de contacts.";
-    case CONTACTS_ERREUR_PARAMETRE: return "Paramètre invalide.";
+    case CONTACTS_ERREUR_PARAMETRE: return "Paramètre invalide (pour une clef crypt, N doit dépasser 2^32 - 1).";
     case CONTACTS_ERREUR_IDENTIFIANT: return "Identifiant ou référence contact/clef invalide.";
     case CONTACTS_ERREUR_INTROUVABLE: return "Contact ou clef introuvable.";
     case CONTACTS_ERREUR_DOUBLON: return "Cet identifiant existe déjà.";
@@ -281,7 +297,7 @@ const char *contacts_message_erreur(int resultat)
     case CONTACTS_ERREUR_FICHIER: return "Erreur de lecture ou d'écriture.";
     case CONTACTS_ERREUR_FORMAT: return "Section de contacts invalide.";
     case CONTACTS_ERREUR_TYPE: return "Type de clef incompatible.";
-    case CONTACTS_ERREUR_AMBIGU: return "Plusieurs contacts portent ce nom ; utiliser l'identifiant.";
+    case CONTACTS_ERREUR_AMBIGU: return "Référence ambiguë : utiliser l'identifiant du contact, ou contact/clef s'il a plusieurs clefs.";
     case CONTACTS_ERREUR_SAISIE: return "Saisie absente, trop longue ou invalide.";
     case CONTACTS_ERREUR_PRIVEE: return "Les contacts contiennent seulement des clefs publiques.";
     default: return "Erreur de contacts inconnue.";

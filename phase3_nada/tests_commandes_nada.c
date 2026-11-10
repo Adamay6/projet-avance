@@ -1,6 +1,7 @@
 /// \file tests_commandes_nada.c
 /// \author Nada ARABA
-/// \brief Tests de la phase 3 (partie Nada) : table_chercher provisoire, show, crypt, uncrypt et savepub.
+/// \brief Tests de la phase 3 (partie Nada) : table_chercher provisoire, show, crypt, uncrypt, savepub,
+///        et les clefs de contacts V2 (contact/clef, contact seul).
 #include <inttypes.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -11,6 +12,7 @@
 #include "../phase2_nada/gmp_rsa.h"   /* gen_keys_gmp : clefs avec N > 2^32 */
 #include "../phase1_loann/base64.h"
 #include "../phase2_loann/base64_v2.h"
+#include "../phase3_adam/contacts.h"   /* annuaire des contacts V2 (Adam) */
 
 static int echecs = 0;
 #define VERIF(cond) do { if (!(cond)) { fprintf(stderr, "ECHEC ligne %d : %s\n", __LINE__, #cond); echecs++; } } while (0)
@@ -21,10 +23,10 @@ static entree_clef_t entrees[] = {
     { "alice_sign", CLEF_SIGN, { 3, 0x1a2b3c4dULL }, { 7, 0x1a2b3c4dULL }, true },
     { "bob", CLEF_CRYPT, { 65537, 0xdeadbeefULL }, { 0, 0 }, false }
 };
-static table_clefs_t table = { entrees, sizeof entrees / sizeof entrees[0], sizeof entrees / sizeof entrees[0] };
+static table_clefs_t table = { entrees, sizeof entrees / sizeof entrees[0], sizeof entrees / sizeof entrees[0], NULL };
 
 static void test_table_chercher(void) {
-    table_clefs_t vide = { NULL, 0, 0 }, incoherente = { NULL, 2, 2 };
+    table_clefs_t vide = { NULL, 0, 0, NULL }, incoherente = { NULL, 2, 2, NULL };
     VERIF(table_chercher(NULL, "alice") == NULL);
     VERIF(table_chercher(&table, NULL) == NULL);
     VERIF(table_chercher(&vide, "alice") == NULL);
@@ -39,12 +41,18 @@ static void test_table_chercher(void) {
 static void test_show_erreurs(void) {
     char *sans_id[] = { "show" }, *trop[] = { "show", "alice", "bob" }, *inconnu[] = { "show", "carole" };
     char *id_null[] = { "show", NULL };
+    char *deux_pub[] = { "show", "alice", "pub", "pub" }, *cinq[] = { "show", "alice", "pub", "priv", "pub" };
+    char *bob_priv[] = { "show", "bob", "priv" }, *opt_null[] = { "show", "alice", NULL };
     VERIF(cmd_show(NULL, 2, inconnu) == RSA_ERREUR_PARAMETRE);
     VERIF(cmd_show(&table, 2, NULL) == RSA_ERREUR_PARAMETRE);
     VERIF(cmd_show(&table, 1, sans_id) == CMD_ERREUR_SYNTAXE);
     VERIF(cmd_show(&table, 3, trop) == CMD_ERREUR_SYNTAXE);
     VERIF(cmd_show(&table, 2, id_null) == CMD_ERREUR_SYNTAXE);
     VERIF(cmd_show(&table, 2, inconnu) == CMD_ERREUR_ID_INCONNU);
+    VERIF(cmd_show(&table, 4, deux_pub) == CMD_ERREUR_SYNTAXE);           /* option repetee */
+    VERIF(cmd_show(&table, 5, cinq) == CMD_ERREUR_SYNTAXE);
+    VERIF(cmd_show(&table, 3, opt_null) == CMD_ERREUR_SYNTAXE);
+    VERIF(cmd_show(&table, 3, bob_priv) == CMD_ERREUR_PAS_DE_PRIVEE);     /* clef publique seule */
 }
 
 static int ecrire_fichier(const char *chemin, const uint8_t *donnees, size_t taille) {
@@ -79,7 +87,7 @@ static void test_crypt_uncrypt(void) {
     e[2] = (entree_clef_t){ "bob_pub", CLEF_CRYPT, pub, { 0, 0 }, false };
     e[3] = (entree_clef_t){ "phase1", CLEF_CRYPT, { 3, 1000003ULL }, { 666011, 1000003ULL }, true };  /* N <= 2^32 */
     e[4] = (entree_clef_t){ "autre", CLEF_CRYPT, pub2, priv2, true };
-    table_clefs_t t = { e, 5, 5 };
+    table_clefs_t t = { e, 5, 5, NULL };
 
     /* aller-retour : tailles du cahier des charges, puis un fichier binaire avec les 256 octets */
     static const size_t tailles[] = { 0, 1, 3, 4, 5, 1000, 256 };
@@ -87,8 +95,8 @@ static void test_crypt_uncrypt(void) {
     for (size_t i = 0; i < sizeof tailles / sizeof tailles[0]; i++) {
         for (size_t j = 0; j < tailles[i]; j++)
             donnees[j] = tailles[i] == 256 ? (uint8_t)j : (uint8_t)("Message UTF-8 : é è à !"[j % 26]);
-        char *c[] = { "crypt", "alice", "clair.bin", "chiffre.bin" };
-        char *u[] = { "uncrypt", "alice", "chiffre.bin", "restitue.bin" };
+        char *c[] = { "crypt", "clair.bin", "chiffre.bin", "alice" };
+        char *u[] = { "uncrypt", "chiffre.bin", "restitue.bin", "alice" };
         VERIF(ecrire_fichier("clair.bin", donnees, tailles[i]));
         VERIF(cmd_crypt(&t, 4, c) == RSA_SUCCES);
         VERIF(cmd_uncrypt(&t, 4, u) == RSA_SUCCES);
@@ -96,20 +104,20 @@ static void test_crypt_uncrypt(void) {
         VERIF(!fichiers_egaux("clair.bin", "chiffre.bin"));
     }
 
-    char *c_pub[] = { "crypt", "bob_pub", "clair.bin", "chiffre_bob.bin" };
-    char *u_pub[] = { "uncrypt", "bob_pub", "chiffre_bob.bin", "restitue.bin" };
+    char *c_pub[] = { "crypt", "clair.bin", "chiffre_bob.bin", "bob_pub" };
+    char *u_pub[] = { "uncrypt", "chiffre_bob.bin", "restitue.bin", "bob_pub" };
     VERIF(cmd_crypt(&t, 4, c_pub) == RSA_SUCCES);                    /* la clef publique suffit pour chiffrer */
     VERIF(cmd_uncrypt(&t, 4, u_pub) == CMD_ERREUR_PAS_DE_PRIVEE);
 
-    char *c_court[] = { "crypt", "alice", "clair.bin" };
-    char *c_long[] = { "crypt", "alice", "a", "b", "c" };
-    char *c_null[] = { "crypt", "alice", NULL, "b" };
-    char *c_inconnu[] = { "crypt", "carole", "clair.bin", "x.bin" };
-    char *c_sign[] = { "crypt", "alice_sign", "clair.bin", "x.bin" };
-    char *u_sign[] = { "uncrypt", "alice_sign", "chiffre.bin", "x.bin" };
-    char *c_phase1[] = { "crypt", "phase1", "clair.bin", "x.bin" };
-    char *c_absent[] = { "crypt", "alice", "fichier_absent.bin", "x.bin" };
-    char *u_clair[] = { "uncrypt", "alice", "clair.bin", "x.bin" };
+    char *c_court[] = { "crypt", "clair.bin", "alice" };
+    char *c_long[] = { "crypt", "a", "b", "alice", "c" };
+    char *c_null[] = { "crypt", "clair.bin", NULL, "alice" };
+    char *c_inconnu[] = { "crypt", "clair.bin", "x.bin", "carole" };
+    char *c_sign[] = { "crypt", "clair.bin", "x.bin", "alice_sign" };
+    char *u_sign[] = { "uncrypt", "chiffre.bin", "x.bin", "alice_sign" };
+    char *c_phase1[] = { "crypt", "clair.bin", "x.bin", "phase1" };
+    char *c_absent[] = { "crypt", "fichier_absent.bin", "x.bin", "alice" };
+    char *u_clair[] = { "uncrypt", "clair.bin", "x.bin", "alice" };
     VERIF(cmd_crypt(NULL, 4, c_inconnu) == RSA_ERREUR_PARAMETRE);
     VERIF(cmd_uncrypt(&t, 4, NULL) == RSA_ERREUR_PARAMETRE);
     VERIF(cmd_crypt(&t, 3, c_court) == CMD_ERREUR_SYNTAXE);
@@ -124,8 +132,8 @@ static void test_crypt_uncrypt(void) {
 
     /* mauvaise clef : on ne doit jamais retrouver le clair */
     uint8_t texte[] = "Rendez-vous a 14h";
-    char *c_ok[] = { "crypt", "alice", "clair.bin", "chiffre.bin" };
-    char *u_autre[] = { "uncrypt", "autre", "chiffre.bin", "restitue_autre.bin" };
+    char *c_ok[] = { "crypt", "clair.bin", "chiffre.bin", "alice" };
+    char *u_autre[] = { "uncrypt", "chiffre.bin", "restitue_autre.bin", "autre" };
     VERIF(ecrire_fichier("clair.bin", texte, sizeof texte - 1));
     VERIF(cmd_crypt(&t, 4, c_ok) == RSA_SUCCES);
     int r = cmd_uncrypt(&t, 4, u_autre);
@@ -144,7 +152,7 @@ static void test_savepub(void) {
     e[1] = (entree_clef_t){ "alice_sign", CLEF_SIGN, pub_s, priv_s, true };
     e[2] = (entree_clef_t){ "bob_pub", CLEF_CRYPT, { 65537, 0xdeadbeefULL }, { 0, 0 }, false };
     e[3] = (entree_clef_t){ "", CLEF_CRYPT, { 0, 0 }, { 0, 0 }, false };   /* rempli apres import */
-    table_clefs_t t = { e, 3, 4 };
+    table_clefs_t t = { e, 3, 4, NULL };
 
     /* Le fichier contient exactement "DIYPG_PUBKEY_V3 <type> <E> <N>" en base64 : jamais la clef privee. */
     char *s[] = { "savepub", "alice", "alice_pub.b64" };
@@ -163,8 +171,8 @@ static void test_savepub(void) {
     e[3] = (entree_clef_t){ "alice_importee", CLEF_CRYPT, importee, { 0, 0 }, false };
     t.nb = 4;
     uint8_t msg[] = "Message pour Alice";
-    char *c[] = { "crypt", "alice_importee", "pour_alice.txt", "pour_alice.bin" };
-    char *u[] = { "uncrypt", "alice", "pour_alice.bin", "pour_alice_lu.txt" };
+    char *c[] = { "crypt", "pour_alice.txt", "pour_alice.bin", "alice_importee" };
+    char *u[] = { "uncrypt", "pour_alice.bin", "pour_alice_lu.txt", "alice" };
     VERIF(ecrire_fichier("pour_alice.txt", msg, sizeof msg - 1));
     VERIF(cmd_crypt(&t, 4, c) == RSA_SUCCES);
     VERIF(cmd_uncrypt(&t, 4, u) == RSA_SUCCES);
@@ -192,6 +200,80 @@ static void test_savepub(void) {
     VERIF(cmd_savepub(&t, 3, ecriture) == RSA_ERREUR_FICHIER);
 }
 
+/* V2 : crypt / uncrypt / savepub / show avec une clef de contact (sujet : crypt msg.txt msgCode.txt idcontact/idclef). */
+static void test_contacts_v2(void) {
+    rsaKey_t moi_pub, moi_priv, autre_pub, autre_priv, importee = { 0, 0 };
+    char type[PUBKEY_TYPE_TAILLE] = "";
+    VERIF(gen_keys_gmp(&moi_pub, &moi_priv, 26) == RSA_SUCCES);
+    VERIF(gen_keys_gmp(&autre_pub, &autre_priv, 26) == RSA_SUCCES);
+    /* clefs de l'utilisateur ; "bob" porte aussi le nom d'un contact : la clef de l'utilisateur passe avant */
+    entree_clef_t e[3];
+    e[0] = (entree_clef_t){ "moi", CLEF_CRYPT, moi_pub, moi_priv, true };
+    e[1] = (entree_clef_t){ "autre", CLEF_CRYPT, autre_pub, autre_priv, true };
+    e[2] = (entree_clef_t){ "bob", CLEF_CRYPT, autre_pub, autre_priv, true };
+    annuaire_contacts_t annuaire;
+    contacts_initialiser(&annuaire);
+    VERIF(contacts_ajouter(&annuaire, "bob", "Martin", "Bob", "") == CONTACTS_SUCCES);
+    VERIF(contacts_ajouter_cle(&annuaire, "bob", "pro", CONTACT_CRYPT, &moi_pub) == CONTACTS_SUCCES);
+    VERIF(contacts_ajouter(&annuaire, "jean", "Dupuis", "Jean", "voisin du dessus") == CONTACTS_SUCCES);
+    VERIF(contacts_ajouter_cle(&annuaire, "jean", "perso", CONTACT_CRYPT, &autre_pub) == CONTACTS_SUCCES);
+    VERIF(contacts_ajouter_cle(&annuaire, "jean", "signe", CONTACT_SIGN, &(rsaKey_t){ 17, 3233 }) == CONTACTS_SUCCES);
+    table_clefs_t t = { e, 3, 3, &annuaire };
+
+    uint8_t msg[] = "Message pour un contact";
+    VERIF(ecrire_fichier("contact_clair.txt", msg, sizeof msg - 1));
+    char *c_slash[] = { "crypt", "contact_clair.txt", "c1.bin", "bob/pro" };
+    char *u_moi[] = { "uncrypt", "c1.bin", "c1.txt", "moi" };
+    VERIF(cmd_crypt(&t, 4, c_slash) == RSA_SUCCES);                    /* clef publique du contact */
+    VERIF(cmd_uncrypt(&t, 4, u_moi) == RSA_SUCCES);
+    VERIF(fichiers_egaux("contact_clair.txt", "c1.txt"));
+    char *c_jean[] = { "crypt", "contact_clair.txt", "c2.bin", "jean/perso" };
+    char *u_autre[] = { "uncrypt", "c2.bin", "c2.txt", "autre" };
+    VERIF(cmd_crypt(&t, 4, c_jean) == RSA_SUCCES);
+    VERIF(cmd_uncrypt(&t, 4, u_autre) == RSA_SUCCES);
+    VERIF(fichiers_egaux("contact_clair.txt", "c2.txt"));
+    char *c_bob[] = { "crypt", "contact_clair.txt", "c3.bin", "bob" };   /* clef de l'utilisateur "bob" */
+    char *u_bob[] = { "uncrypt", "c3.bin", "c3.txt", "autre" };
+    VERIF(cmd_crypt(&t, 4, c_bob) == RSA_SUCCES);
+    VERIF(cmd_uncrypt(&t, 4, u_bob) == RSA_SUCCES);
+    VERIF(fichiers_egaux("contact_clair.txt", "c3.txt"));
+
+    /* "contact" seul : accepte s'il a une seule clef, sinon il faut contact/clef */
+    e[2].id[0] = '\0';   /* plus de clef utilisateur "bob" : "bob" designe le contact */
+    char *c_seul[] = { "crypt", "contact_clair.txt", "c4.bin", "bob" };
+    char *u_seul[] = { "uncrypt", "c4.bin", "c4.txt", "moi" };
+    VERIF(cmd_crypt(&t, 4, c_seul) == RSA_SUCCES);
+    VERIF(cmd_uncrypt(&t, 4, u_seul) == RSA_SUCCES);
+    VERIF(fichiers_egaux("contact_clair.txt", "c4.txt"));
+    char *c_ambigu[] = { "crypt", "contact_clair.txt", "x.bin", "jean" };
+    char *c_signe[] = { "crypt", "contact_clair.txt", "x.bin", "jean/signe" };
+    char *c_absente[] = { "crypt", "contact_clair.txt", "x.bin", "jean/absente" };
+    char *c_inconnu[] = { "crypt", "contact_clair.txt", "x.bin", "carole/pro" };
+    char *c_invalide[] = { "crypt", "contact_clair.txt", "x.bin", "jean/" };
+    char *u_contact[] = { "uncrypt", "c2.bin", "x.txt", "jean/perso" };
+    VERIF(cmd_crypt(&t, 4, c_ambigu) == CMD_ERREUR_AMBIGU);
+    VERIF(cmd_crypt(&t, 4, c_signe) == CMD_ERREUR_TYPE);
+    VERIF(cmd_crypt(&t, 4, c_absente) == CMD_ERREUR_ID_INCONNU);
+    VERIF(cmd_crypt(&t, 4, c_inconnu) == CMD_ERREUR_ID_INCONNU);
+    VERIF(cmd_crypt(&t, 4, c_invalide) == CMD_ERREUR_SYNTAXE);
+    VERIF(cmd_uncrypt(&t, 4, u_contact) == CMD_ERREUR_PAS_DE_PRIVEE);   /* contact : clef publique seule */
+
+    char *s_contact[] = { "savepub", "jean/perso", "jean_perso.b64" };
+    char *s_signe[] = { "savepub", "jean/signe", "jean_signe.b64" };
+    char *show_priv[] = { "show", "jean/perso", "priv" };
+    VERIF(cmd_savepub(&t, 3, s_contact) == CMD_SUCCES);
+    VERIF(import_pubkey_b64("jean_perso.b64", &importee, type) == 0);
+    VERIF(importee.E == autre_pub.E && importee.N == autre_pub.N && strcmp(type, "crypt") == 0);
+    VERIF(cmd_savepub(&t, 3, s_signe) == CMD_SUCCES);
+    VERIF(import_pubkey_b64("jean_signe.b64", &importee, type) == 0 && strcmp(type, "sign") == 0);
+    VERIF(cmd_show(&t, 3, show_priv) == CMD_ERREUR_PAS_DE_PRIVEE);
+
+    /* sans annuaire (V1) : une reference contact/clef est inconnue */
+    t.contacts = NULL;
+    VERIF(cmd_crypt(&t, 4, c_jean) == CMD_ERREUR_ID_INCONNU);
+    contacts_liberer(&annuaire);
+}
+
 /* Lit tout le fichier dans buf (termine par '\0'). */
 static void lire_fichier(const char *chemin, char *buf, size_t taille) {
     size_t n = 0;
@@ -206,7 +288,15 @@ static void lire_fichier(const char *chemin, char *buf, size_t taille) {
 /* En dernier : la sortie standard est redirigee vers un fichier pour verifier l'affichage. */
 static void test_show_affichage(void) {
     char *a[] = { "show", "alice" }, *s[] = { "show", "alice_sign" }, *b[] = { "show", "bob" };
-    char texte[1024];
+    char *a_pub[] = { "show", "alice", "pub" }, *a_priv[] = { "show", "alice", "priv" };
+    char *a_deux[] = { "show", "alice", "priv", "pub" }, *contact[] = { "show", "jean/perso" };
+    char texte[2048];
+    annuaire_contacts_t annuaire;
+    contacts_initialiser(&annuaire);
+    VERIF(contacts_ajouter(&annuaire, "jean", "Dupuis", "Jean", "") == CONTACTS_SUCCES);
+    VERIF(contacts_ajouter_cle(&annuaire, "jean", "perso", CONTACT_CRYPT,
+                               &(rsaKey_t){ 65537, 4295229443ULL }) == CONTACTS_SUCCES);
+    table.contacts = &annuaire;
     fflush(stdout);
     if (freopen("show_sortie.txt", "w", stdout) == NULL) {
         fprintf(stderr, "ECHEC : redirection de la sortie impossible\n");
@@ -216,13 +306,26 @@ static void test_show_affichage(void) {
     VERIF(cmd_show(&table, 2, a) == CMD_SUCCES);
     VERIF(cmd_show(&table, 2, s) == CMD_SUCCES);
     VERIF(cmd_show(&table, 2, b) == CMD_SUCCES);
+    VERIF(cmd_show(&table, 3, a_pub) == CMD_SUCCES);
+    VERIF(cmd_show(&table, 3, a_priv) == CMD_SUCCES);
+    VERIF(cmd_show(&table, 4, a_deux) == CMD_SUCCES);
+    VERIF(cmd_show(&table, 2, contact) == CMD_SUCCES);
     fflush(stdout);
     lire_fichier("show_sortie.txt", texte, sizeof texte);
-    VERIF(strstr(texte, "alice (crypt)\nclef publique : E = 0x10001  N = 0x100040003\n"
-                        "clef privee   : E = 0x12d687  N = 0x100040003\n") != NULL);
-    VERIF(strstr(texte, "alice_sign (sign)\nclef publique : E = 0x3  N = 0x1a2b3c4d\n") != NULL);
-    VERIF(strstr(texte, "bob (crypt)\nclef publique : E = 0x10001  N = 0xdeadbeef\n"
-                        "clef privee   : absente\n") != NULL);
+    VERIF(strcmp(texte,
+        "alice (crypt)\nclef publique : E = 0x10001  N = 0x100040003\n"
+        "clef privee   : E = 0x12d687  N = 0x100040003\n"
+        "alice_sign (sign)\nclef publique : E = 0x3  N = 0x1a2b3c4d\n"
+        "clef privee   : E = 0x7  N = 0x1a2b3c4d\n"
+        "bob (crypt)\nclef publique : E = 0x10001  N = 0xdeadbeef\nclef privee   : absente\n"
+        "alice (crypt)\nclef publique : E = 0x10001  N = 0x100040003\n"              /* show alice pub */
+        "alice (crypt)\nclef privee   : E = 0x12d687  N = 0x100040003\n"            /* show alice priv */
+        "alice (crypt)\nclef publique : E = 0x10001  N = 0x100040003\n"              /* show alice priv pub */
+        "clef privee   : E = 0x12d687  N = 0x100040003\n"
+        "jean/perso (crypt)\nclef publique : E = 0x10001  N = 0x100040003\n"         /* clef de contact */
+        "clef privee   : absente\n") == 0);
+    table.contacts = NULL;
+    contacts_liberer(&annuaire);
 }
 
 int main(void) {
@@ -231,6 +334,7 @@ int main(void) {
     test_show_erreurs();
     test_crypt_uncrypt();
     test_savepub();
+    test_contacts_v2();
     test_show_affichage();
     base64_cleanup();
     close_log();

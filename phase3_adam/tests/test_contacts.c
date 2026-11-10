@@ -58,7 +58,10 @@ static int commande(annuaire_contacts_t *annuaire, const char *nom, int argc,
         if (sortie != NULL) fclose(sortie);
         return CONTACTS_ERREUR_FICHIER;
     }
-    resultat = contacts_executer(annuaire, nom, argc, argv, entree, sortie);
+    /* contacts_executer recoit argv[0] = nom de la commande, comme main. */
+    const char *argv_total[8] = {nom};
+    for (int i = 0; i < argc && i < 7; ++i) argv_total[i + 1] = argv[i];
+    resultat = contacts_executer(annuaire, argc + 1, argv_total, entree, sortie);
     if (fclose(entree) != 0) resultat = CONTACTS_ERREUR_FICHIER;
     if (fclose(sortie) != 0) resultat = CONTACTS_ERREUR_FICHIER;
     return resultat;
@@ -111,6 +114,10 @@ int main(void)
     VERIFIER(contacts_ajouter_cle(&a, "alice", "a/b", CONTACT_CRYPT, &cle) == CONTACTS_ERREUR_IDENTIFIANT);
     VERIFIER(contacts_ajouter_cle(&a, "alice", "bad", CONTACT_CRYPT,
                                  &(rsaKey_t){0, 9}) == CONTACTS_ERREUR_PARAMETRE);
+    /* Une clef crypt doit servir aux blocs de 4 octets : N > 2^32 - 1. Pas de borne pour sign. */
+    VERIFIER(contacts_ajouter_cle(&a, "alice", "petite", CONTACT_CRYPT,
+                                 &(rsaKey_t){3, UINT32_MAX}) == CONTACTS_ERREUR_PARAMETRE);
+    VERIFIER(contacts_lire_cle(&a, "alice/petite", &infos_cle) == CONTACTS_ERREUR_INTROUVABLE);
     VERIFIER(contacts_lire_cle(&a, "alice/pro", &infos_cle) == 0);
     VERIFIER(infos_cle.type == CONTACT_CRYPT && infos_cle.publique.N == cle.N);
     VERIFIER(contacts_resoudre(&a, "alice/signature", CONTACT_CRYPT, &copie) == CONTACTS_ERREUR_TYPE);
@@ -127,9 +134,18 @@ int main(void)
     VERIFIER(contacts_resoudre_entree(&a, "alice/signature", &entree) == CMD_SUCCES);
     VERIFIER(entree.type == CLEF_SIGN && entree.pub.E == signature.E && entree.pub.N == signature.N);
     VERIFIER(contacts_resoudre_entree(&a, "alice/absente", &entree) == CMD_ERREUR_ID_INCONNU);
-    VERIFIER(contacts_resoudre_entree(&a, "alice", &entree) == CMD_ERREUR_SYNTAXE);
+    VERIFIER(contacts_resoudre_entree(&a, "alice", &entree) == CMD_ERREUR_AMBIGU);   /* deux clefs */
+    VERIFIER(contacts_resoudre_entree(&a, "a b", &entree) == CMD_ERREUR_SYNTAXE);
     VERIFIER(strcmp(entree.id, "signature") == 0 && entree.type == CLEF_SIGN);
-    const char *invalides[] = {"alice", "/pro", "alice/", "alice/pro/autre", "a b/pro", "alice/a b"};
+    /* Sujet V2 : "contact" seul suffit si le contact a une seule clef. */
+    VERIFIER(contacts_lire_cle(&a, "alice", &infos_cle) == CONTACTS_ERREUR_AMBIGU);
+    VERIFIER(contacts_lire_cle(&a, "bob", &infos_cle) == 0 && strcmp(infos_cle.identifiant, "pro") == 0);
+    VERIFIER(contacts_lire_cle(&a, "charlie", &infos_cle) == CONTACTS_ERREUR_INTROUVABLE);   /* aucune clef */
+    VERIFIER(contacts_lire_cle(&a, "absent", &infos_cle) == CONTACTS_ERREUR_INTROUVABLE);
+    VERIFIER(contacts_resoudre(&a, "bob", CONTACT_CRYPT, &copie) == 0 && copie.N == cle.N);
+    VERIFIER(contacts_resoudre(&a, "bob", CONTACT_SIGN, &copie) == CONTACTS_ERREUR_TYPE);
+    VERIFIER(contacts_supprimer_cle(&a, "bob") == CONTACTS_ERREUR_IDENTIFIANT);   /* rmkeys exige contact/clef */
+    const char *invalides[] = {"a b", "/pro", "alice/", "alice/pro/autre", "a b/pro", "alice/a b"};
     for (size_t i = 0; i < sizeof invalides / sizeof invalides[0]; ++i)
         VERIFIER(contacts_lire_cle(&a, invalides[i], &infos_cle) == CONTACTS_ERREUR_IDENTIFIANT);
     VERIFIER(contacts_lire_cle(&a, "absent/pro", &infos_cle) == CONTACTS_ERREUR_INTROUVABLE);
