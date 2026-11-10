@@ -4,6 +4,7 @@
 #include "../phase1_nada/phase1/phase1.h"   /* print_key_hex */
 #include "../phase1_adam/chiffrement.h"     /* codes RSA_* */
 #include "../phase2_adam/chiffrement_blocs.h"   /* fichiers par blocs (Adam, phase 2) */
+#include "../phase2_loann/base64_v2.h"        /* export_pubkey_b64 (Loann, phase 2) */
 
 static const char *nom_type(type_clef_t type) {
     return type == CLEF_SIGN ? "sign" : "crypt";
@@ -45,4 +46,13 @@ int cmd_uncrypt(table_clefs_t *table, int argc, char **argv) {
     if (res != CMD_SUCCES) return res;
     if (!e->a_priv) return CMD_ERREUR_PAS_DE_PRIVEE;
     return dechiffrer_fichier_blocs_gmp(argv[2], argv[3], &e->priv);
+}
+
+int cmd_savepub(table_clefs_t *table, int argc, char **argv) {
+    if (table == NULL || argv == NULL) return RSA_ERREUR_PARAMETRE;
+    if (argc != 3 || argv[1] == NULL || argv[2] == NULL) return CMD_ERREUR_SYNTAXE;
+    const entree_clef_t *e = table_chercher(table, argv[1]);
+    if (e == NULL) return CMD_ERREUR_ID_INCONNU;
+    /* export_pubkey_b64 renvoie 0 ou -1 : -1 vient d'une ecriture impossible (parametres deja verifies) */
+    return export_pubkey_b64(argv[2], &e->pub) == 0 ? CMD_SUCCES : RSA_ERREUR_FICHIER;
 }

@@ -30,4 +30,13 @@ int cmd_crypt(table_clefs_t *table, int argc, char **argv);
  */
 int cmd_uncrypt(table_clefs_t *table, int argc, char **argv);
 
+/*
+ * savepub <id> <fichier> : exporte la clef publique de <id> en base64 (export_pubkey_b64 de Loann,
+ * phase 2), pour l'envoyer a un contact. Accepte les clefs crypt et sign : une clef publique sign
+ * sert a verifier les signatures. La clef privee n'est jamais ecrite.
+ * Retourne CMD_SUCCES, CMD_ERREUR_SYNTAXE, CMD_ERREUR_ID_INCONNU, RSA_ERREUR_PARAMETRE
+ * ou RSA_ERREUR_FICHIER (ecriture impossible).
+ */
+int cmd_savepub(table_clefs_t *table, int argc, char **argv);
+
 #endif

@@ -1,12 +1,16 @@
 /// \file tests_commandes_nada.c
 /// \author Nada ARABA
-/// \brief Tests de la phase 3 (partie Nada) : table_chercher provisoire, show, crypt et uncrypt.
+/// \brief Tests de la phase 3 (partie Nada) : table_chercher provisoire, show, crypt, uncrypt et savepub.
+#include <inttypes.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include "commandes_nada.h"
 #include "../phase1_nada/phase1/phase1.h"
 #include "../phase1_adam/chiffrement.h"
 #include "../phase2_nada/gmp_rsa.h"   /* gen_keys_gmp : clefs avec N > 2^32 */
+#include "../phase1_loann/base64.h"
+#include "../phase2_loann/base64_v2.h"
 
 static int echecs = 0;
 #define VERIF(cond) do { if (!(cond)) { fprintf(stderr, "ECHEC ligne %d : %s\n", __LINE__, #cond); echecs++; } } while (0)
@@ -128,6 +132,63 @@ static void test_crypt_uncrypt(void) {
     VERIF(r != RSA_SUCCES || !fichiers_egaux("clair.bin", "restitue_autre.bin"));
 }
 
+static void lire_fichier(const char *chemin, char *buf, size_t taille);
+
+static void test_savepub(void) {
+    rsaKey_t pub, priv, pub_s, priv_s, importee = { 0, 0 };
+    VERIF(gen_keys_gmp(&pub, &priv, 27) == RSA_SUCCES);
+    VERIF(gen_keys_gmp(&pub_s, &priv_s, 27) == RSA_SUCCES);
+    entree_clef_t e[4];
+    e[0] = (entree_clef_t){ "alice", CLEF_CRYPT, pub, priv, true };
+    e[1] = (entree_clef_t){ "alice_sign", CLEF_SIGN, pub_s, priv_s, true };
+    e[2] = (entree_clef_t){ "bob_pub", CLEF_CRYPT, { 65537, 0xdeadbeefULL }, { 0, 0 }, false };
+    e[3] = (entree_clef_t){ "", CLEF_CRYPT, { 0, 0 }, { 0, 0 }, false };   /* rempli apres import */
+    table_clefs_t t = { e, 3, 4 };
+
+    /* Le fichier contient exactement "DIYPG_PUBKEY_V2 <E> <N>" en base64 : jamais la clef privee. */
+    char *s[] = { "savepub", "alice", "alice_pub.b64" };
+    char b64[256], attendu[128];
+    VERIF(cmd_savepub(&t, 3, s) == CMD_SUCCES);
+    lire_fichier("alice_pub.b64", b64, sizeof b64);
+    size_t n = 0;
+    unsigned char *clair = base64_decode(b64, strlen(b64), &n);
+    snprintf(attendu, sizeof attendu, "DIYPG_PUBKEY_V2 %" PRIu64 " %" PRIu64, pub.E, pub.N);
+    VERIF(clair != NULL && n == strlen(attendu) && memcmp(clair, attendu, n) == 0);
+    free(clair);
+    VERIF(import_pubkey_b64("alice_pub.b64", &importee) == 0);
+    VERIF(importee.E == pub.E && importee.N == pub.N);
+
+    /* echange : un contact importe la clef, chiffre pour alice, alice dechiffre */
+    e[3] = (entree_clef_t){ "alice_importee", CLEF_CRYPT, importee, { 0, 0 }, false };
+    t.nb = 4;
+    uint8_t msg[] = "Message pour Alice";
+    char *c[] = { "crypt", "alice_importee", "pour_alice.txt", "pour_alice.bin" };
+    char *u[] = { "uncrypt", "alice", "pour_alice.bin", "pour_alice_lu.txt" };
+    VERIF(ecrire_fichier("pour_alice.txt", msg, sizeof msg - 1));
+    VERIF(cmd_crypt(&t, 4, c) == RSA_SUCCES);
+    VERIF(cmd_uncrypt(&t, 4, u) == RSA_SUCCES);
+    VERIF(fichiers_egaux("pour_alice.txt", "pour_alice_lu.txt"));
+
+    /* clef sign et clef publique seule : exportables aussi */
+    char *s_sign[] = { "savepub", "alice_sign", "sign_pub.b64" };
+    char *s_pub[] = { "savepub", "bob_pub", "bob_pub.b64" };
+    VERIF(cmd_savepub(&t, 3, s_sign) == CMD_SUCCES);
+    VERIF(import_pubkey_b64("sign_pub.b64", &importee) == 0 && importee.E == pub_s.E && importee.N == pub_s.N);
+    VERIF(cmd_savepub(&t, 3, s_pub) == CMD_SUCCES);
+    VERIF(import_pubkey_b64("bob_pub.b64", &importee) == 0 && importee.E == 65537 && importee.N == 0xdeadbeefULL);
+
+    char *court[] = { "savepub", "alice" }, *trop[] = { "savepub", "alice", "a.b64", "b.b64" };
+    char *f_null[] = { "savepub", "alice", NULL }, *inconnu[] = { "savepub", "carole", "c.b64" };
+    char *ecriture[] = { "savepub", "alice", "dossier_absent/alice.b64" };
+    VERIF(cmd_savepub(NULL, 3, s) == RSA_ERREUR_PARAMETRE);
+    VERIF(cmd_savepub(&t, 3, NULL) == RSA_ERREUR_PARAMETRE);
+    VERIF(cmd_savepub(&t, 2, court) == CMD_ERREUR_SYNTAXE);
+    VERIF(cmd_savepub(&t, 4, trop) == CMD_ERREUR_SYNTAXE);
+    VERIF(cmd_savepub(&t, 3, f_null) == CMD_ERREUR_SYNTAXE);
+    VERIF(cmd_savepub(&t, 3, inconnu) == CMD_ERREUR_ID_INCONNU);
+    VERIF(cmd_savepub(&t, 3, ecriture) == RSA_ERREUR_FICHIER);
+}
+
 /* Lit tout le fichier dans buf (termine par '\0'). */
 static void lire_fichier(const char *chemin, char *buf, size_t taille) {
     size_t n = 0;
@@ -166,7 +227,9 @@ int main(void) {
     test_table_chercher();
     test_show_erreurs();
     test_crypt_uncrypt();
+    test_savepub();
     test_show_affichage();
+    base64_cleanup();
     close_log();
     /* stdout est redirige : le bilan va sur la sortie d'erreur. */
     if (echecs == 0) fprintf(stderr, "Phase 3 (Nada) : tous les tests sont passes.\n");
