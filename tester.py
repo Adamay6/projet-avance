@@ -10,6 +10,8 @@ import shutil
 import subprocess
 import sys
 
+from phase2_adam.tester_phase2 import verifier_reference
+
 ROOT = Path(__file__).resolve().parent
 BUILD = ROOT / "build"
 BIN = BUILD / "bin"
@@ -20,7 +22,7 @@ RSA = ["phase1_nada/phase1/" + name + ".c"
 BASE64 = ["phase1_loann/base64.c", "phase1_loann/other_base64.c"]
 COMMUN = RSA + ["phase1_adam/chiffrement.c"] + BASE64
 GMP_RSA = ["phase2_nada/gmp_rsa.c", "phase2_nada/convert_bytes.c"]
-BLOCS_ADAM = ["phase2_adam/chiffrement_blocs.c", "phase2_adam/fichiers_gmp.c"]
+FICHIERS_BLOCS = ["phase2_adam/chiffrement_blocs.c", "phase2_adam/fichiers_gmp.c"]
 BASE64_V2 = ["phase2_loann/base64_v2.c"]
 COMMANDES_NADA = ["phase3_nada/table_clefs_provisoire.c", "phase3_nada/commandes_nada.c"]
 PROGRAMMES = {
@@ -35,11 +37,15 @@ PROGRAMMES = {
     # Ce test inclut lui-meme keys_io.c et base64.c pour simuler les erreurs.
     "test_io_errors": [RSA[0], RSA[1], RSA[3], BASE64[1], "tests/test_io_errors.c"],
     "test_gmp_rsa": RSA + GMP_RSA + ["phase2_nada/tests_gmp_rsa.c"],
-    "test_commandes_nada": RSA + GMP_RSA + BLOCS_ADAM + BASE64 + BASE64_V2 + COMMANDES_NADA
+    "test_fichiers_blocs": GMP_RSA + FICHIERS_BLOCS + ["phase2_adam/tests/test_fichiers_blocs.c"],
+    "test_blocs_io": ["phase2_adam/tests/test_blocs_io.c"],
+    "test_phase2_loann": BASE64 + GMP_RSA + FICHIERS_BLOCS +
+                        ["phase2_loann/base64_v2.c", "tests/test_phase2_loann.c"],
+    "test_commandes_nada": RSA + GMP_RSA + FICHIERS_BLOCS + BASE64 + BASE64_V2 + COMMANDES_NADA
                            + ["phase3_nada/tests_commandes_nada.c"],
 }
-# Programmes de la phase 2 qui ont besoin de la bibliotheque GMP.
-AVEC_GMP = {"test_gmp_rsa", "test_commandes_nada"}
+# Programmes des phases 2 et 3 qui ont besoin de la bibliotheque GMP.
+AVEC_GMP = {"test_gmp_rsa", "test_fichiers_blocs", "test_phase2_loann", "test_commandes_nada"}
 
 
 def configurer_affichage_utf8():
@@ -162,6 +168,11 @@ def tester():
     lancer("test_io_errors", "io")
     print("\nTous les tests de la phase 1 sont passes.", flush=True)
     lancer("test_gmp_rsa", "gmp")
+    lancer("test_fichiers_blocs", "fichiers_blocs")
+    lancer("test_blocs_io", "blocs_io")
+    verifier_reference(BUILD / "tests" / "fichiers_blocs")
+    print("Phase 2 (Adam) : tous les tests sont OK.", flush=True)
+    lancer("test_phase2_loann", "phase2_loann")
     print("\nTous les tests de la phase 2 sont passes.", flush=True)
     lancer("test_commandes_nada", "phase3")
     print("\nTous les tests de la phase 3 sont passes.", flush=True)
