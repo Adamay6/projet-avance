@@ -96,7 +96,8 @@ Les exécutables sont dans `build/bin` :
 - `test_fichiers_blocs`, `test_blocs_io` : phase 2 (Adam), fichiers par blocs et erreurs d'entrée-sortie ;
 - `test_phase2_loann` : phase 2 (Loann), export et import des clefs publiques, fichiers chiffrés en Base64 ;
 - `test_commandes_nada` : phase 3 (Nada), commandes `show`, `crypt`, `uncrypt` et `savepub`, avec des clefs de contacts ;
-- `test_contacts`, `test_contacts_memoire`, `rejouer_contacts` : phase 3 (Adam), contacts V2, échecs d'allocation simulés et scénario de commandes rejoué.
+- `test_contacts`, `test_contacts_memoire`, `rejouer_contacts` : phase 3 (Adam), contacts V2, échecs d'allocation simulés et scénario de commandes rejoué ;
+- `test_integration` : intégration des phases 1 à 3, échange de fichiers chiffrés entre deux utilisateurs.
 
 Sous Windows, les noms finissent par `.exe`. Le main crée ses fichiers dans le dossier depuis lequel il est lancé : utiliser le lanceur ou `make test` permet de garder tous ces fichiers dans `build/tests`. La commande `clean` enlève uniquement le dossier `build`.
 
@@ -286,4 +287,14 @@ Ils sont compris dans `python3 tester.py` et `make test` :
 - `test_commandes_nada` : aller-retour `crypt`/`uncrypt` sur 0, 1, 3, 4, 5 et 1000 octets et un fichier binaire, clefs de contacts, contact ambigu, mauvais type, clef de la phase 1, fichier absent, mauvaise clef, options de `show` et texte affiché, contenu exact du fichier de `savepub` ;
 - les tests d'Adam : contacts, sauvegarde et chargement, échecs d'allocation, et un scénario de commandes rejoué depuis `phase3_adam/tests/scenario_contacts.txt`.
 
-Le script de commandes de l'interprète complet sera ajouté avec le `main` de Loann.
+### Tests d'intégration
+
+`tests/test_integration.c` fait passer un échange complet par les modules de chacun :
+
+1. Alice et Bob créent leurs clefs GMP et publient leur clef publique avec `savepub` ;
+2. chacun range la clef de l'autre dans un contact (`import_pubkey_b64`, puis l'annuaire d'Adam) ;
+3. Bob chiffre avec `crypt` vers `alice` ou `alice/perso`, convertit en Base64 pour le mail, Alice repasse en binaire et déchiffre avec `uncrypt` ; idem dans l'autre sens, sur 0 à 100003 octets et un texte UTF-8 ;
+4. un tiers ne lit pas le message, une pièce jointe abîmée ne redonne jamais le clair, une clef `sign` reçue ne sert pas à chiffrer ;
+5. l'annuaire sauvegardé puis rechargé sert toujours à chiffrer.
+
+En attendant `newkeys` et `addkeys` dans l'interprète, le test crée les clefs avec `gen_keys_gmp` et range les clefs reçues avec l'API d'Adam. Le script de commandes de l'interprète complet sera ajouté avec le `main` de Loann.
