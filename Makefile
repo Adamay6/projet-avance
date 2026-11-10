@@ -32,7 +32,8 @@ CONTACTS_ADAM = phase3_adam/contacts.c phase3_adam/contacts_io.c phase3_adam/con
 TESTS_CONTACTS = $(BIN)/test_contacts$(EXE) $(BIN)/test_contacts_memoire$(EXE) \
                  $(BIN)/rejouer_contacts$(EXE)
 TESTS_GMP = $(BIN)/test_gmp_rsa$(EXE) $(BIN)/test_fichiers_blocs$(EXE) \
-            $(BIN)/test_phase2_loann$(EXE) $(BIN)/test_commandes_nada$(EXE)
+            $(BIN)/test_phase2_loann$(EXE) $(BIN)/test_commandes_nada$(EXE) \
+            $(BIN)/test_integration$(EXE)
 COMMUN = $(RSA) $(CHIFFREMENT) $(BASE64)
 SOURCES = $(COMMUN) $(TESTS_MODULES) phase1_malek/phase1.c phase1_malek/main_phase1.c \
           phase1_nada/phase1/test_cles.c phase1_nada/phase1/test_maxprime.c \
@@ -41,7 +42,8 @@ SOURCES = $(COMMUN) $(TESTS_MODULES) phase1_malek/phase1.c phase1_malek/main_pha
           phase2_adam/tests/test_fichiers_blocs.c phase2_adam/tests/test_blocs_io.c \
           tests/test_phase2_loann.c $(COMMANDES_NADA) phase3_nada/tests_commandes_nada.c \
           $(CONTACTS_ADAM) phase3_adam/contacts_interpreteur.c phase3_adam/tests/test_contacts.c \
-          phase3_adam/tests/test_contacts_memoire.c phase3_adam/tests/rejouer_contacts.c
+          phase3_adam/tests/test_contacts_memoire.c phase3_adam/tests/rejouer_contacts.c \
+          tests/test_integration.c
 
 all: $(BIN)/test_phase1$(EXE) $(BIN)/test_cles$(EXE) $(BIN)/test_maxprime$(EXE) \
      $(BIN)/test_base64$(EXE) $(BIN)/test_regressions$(EXE) $(BIN)/test_io_errors$(EXE) \
@@ -79,6 +81,11 @@ $(BIN)/test_commandes_nada$(EXE): $(patsubst %.c,$(OBJ)/%.o,$(RSA) $(GMP_RSA) $(
                                   $(CONTACTS_ADAM) phase3_adam/contacts_interpreteur.c phase3_nada/tests_commandes_nada.c)
 $(OBJ)/phase3_nada/%.o: CPPFLAGS += $(GMP_CPPFLAGS)
 
+# Integration des phases 1 a 3 : echange de fichiers chiffres entre deux utilisateurs.
+$(BIN)/test_integration$(EXE): $(patsubst %.c,$(OBJ)/%.o,$(RSA) $(GMP_RSA) $(FICHIERS_BLOCS) $(BASE64) $(BASE64_V2) \
+                               $(COMMANDES_NADA) $(CONTACTS_ADAM) phase3_adam/contacts_interpreteur.c tests/test_integration.c)
+$(OBJ)/tests/test_integration.o: CPPFLAGS += $(GMP_CPPFLAGS)
+
 $(BIN)/test_contacts$(EXE): $(patsubst %.c,$(OBJ)/%.o,$(CONTACTS_ADAM) phase3_adam/contacts_interpreteur.c phase3_adam/tests/test_contacts.c)
 
 $(BIN)/test_contacts_memoire$(EXE): $(OBJ)/phase3_adam/tests/test_contacts_memoire.o
@@ -111,6 +118,8 @@ test: all test-reference
 	cd build/tests/phase3_adam && ../../bin/test_contacts_memoire$(EXE)
 	cd build/tests/phase3_adam && ../../bin/rejouer_contacts$(EXE) ../../../phase3_adam/tests/scenario_contacts.txt
 	@echo "Phase 3 (Adam) : tous les tests sont OK."
+	@mkdir -p build/tests/integration
+	cd build/tests/integration && ../../bin/test_integration$(EXE)
 
 test-reference: $(BIN)/test_base64$(EXE)
 	@mkdir -p build/tests/reference
