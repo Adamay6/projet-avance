@@ -16,7 +16,7 @@ endif
 GMP_RSA = ../phase2_nada/gmp_rsa.c ../phase2_nada/convert_bytes.c
 GMP_HEADERS = ../phase2_nada/gmp_rsa.h ../phase2_nada/convert_bytes.h
 SOURCES = chiffrement_blocs.c fichiers_gmp.c $(GMP_RSA) tests/test_fichiers_blocs.c
-HEADERS = chiffrement_blocs.h ../phase1_adam/chiffrement.h ../nada_phase1/rsa_common_header.h ../console_utf8.h
+HEADERS = chiffrement_blocs.h ../phase1_adam/chiffrement.h ../phase1_nada/rsa_common_header.h ../console_utf8.h
 all: $(BUILD)/test_fichiers_blocs$(EXE) $(BUILD)/test_blocs_io$(EXE)
 $(BUILD)/test_fichiers_blocs$(EXE): $(SOURCES) $(HEADERS) $(GMP_HEADERS) Makefile
 	@mkdir -p $(BUILD)

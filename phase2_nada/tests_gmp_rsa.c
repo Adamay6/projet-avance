@@ -5,7 +5,7 @@
 #include <stdio.h>
 #include <string.h>
 #include "gmp_rsa.h"
-#include "../nada_phase1/phase1/phase1.h"   /* puissance_mod_n (version uint64 de la phase 1) */
+#include "../phase1_nada/phase1/phase1.h"   /* puissance_mod_n (version uint64 de la phase 1) */
 
 static int echecs = 0;
 #define VERIF(cond) do { if (!(cond)) { printf("ECHEC ligne %d : %s\n", __LINE__, #cond); echecs++; } } while (0)

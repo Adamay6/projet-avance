@@ -19,15 +19,15 @@ endif
 
 OBJ = build/obj
 BIN = build/bin
-RSA = nada_phase1/phase1/rsa_tools.c nada_phase1/phase1/bezout.c \
-      nada_phase1/phase1/keys_io.c nada_phase1/phase1/log.c
+RSA = phase1_nada/phase1/rsa_tools.c phase1_nada/phase1/bezout.c \
+      phase1_nada/phase1/keys_io.c phase1_nada/phase1/log.c
 CHIFFREMENT = phase1_adam/chiffrement.c
 BASE64 = phase1_loann/base64.c phase1_loann/other_base64.c
 TESTS_MODULES = phase1_adam/tests_chiffrement.c phase1_loann/tests_base64.c
 GMP_RSA = phase2_nada/gmp_rsa.c phase2_nada/convert_bytes.c
 COMMUN = $(RSA) $(CHIFFREMENT) $(BASE64)
 SOURCES = $(COMMUN) $(TESTS_MODULES) phase1_malek/phase1.c phase1_malek/main_phase1.c \
-          nada_phase1/phase1/test_cles.c nada_phase1/phase1/test_maxprime.c \
+          phase1_nada/phase1/test_cles.c phase1_nada/phase1/test_maxprime.c \
           phase1_loann/main_test_loann.c tests/test_regressions.c tests/test_io_errors.c \
           $(GMP_RSA) phase2_nada/tests_gmp_rsa.c
 
@@ -37,16 +37,16 @@ all: $(BIN)/test_phase1$(EXE) $(BIN)/test_cles$(EXE) $(BIN)/test_maxprime$(EXE) 
 
 $(BIN)/test_phase1$(EXE): $(patsubst %.c,$(OBJ)/%.o,$(COMMUN) $(TESTS_MODULES) phase1_malek/phase1.c phase1_malek/main_phase1.c)
 
-$(BIN)/test_cles$(EXE): $(patsubst %.c,$(OBJ)/%.o,$(RSA) nada_phase1/phase1/test_cles.c)
+$(BIN)/test_cles$(EXE): $(patsubst %.c,$(OBJ)/%.o,$(RSA) phase1_nada/phase1/test_cles.c)
 
-$(BIN)/test_maxprime$(EXE): $(patsubst %.c,$(OBJ)/%.o,$(RSA) nada_phase1/phase1/test_maxprime.c)
+$(BIN)/test_maxprime$(EXE): $(patsubst %.c,$(OBJ)/%.o,$(RSA) phase1_nada/phase1/test_maxprime.c)
 
 $(BIN)/test_base64$(EXE): $(patsubst %.c,$(OBJ)/%.o,$(BASE64) phase1_loann/tests_base64.c phase1_loann/main_test_loann.c)
 
 $(BIN)/test_regressions$(EXE): $(patsubst %.c,$(OBJ)/%.o,$(COMMUN) phase1_malek/phase1.c tests/test_regressions.c)
 
 # Les sources de fichiers sont incluses dans ce test pour simuler les erreurs d'E/S.
-$(BIN)/test_io_errors$(EXE): $(patsubst %.c,$(OBJ)/%.o,nada_phase1/phase1/rsa_tools.c nada_phase1/phase1/bezout.c nada_phase1/phase1/log.c phase1_loann/other_base64.c tests/test_io_errors.c)
+$(BIN)/test_io_errors$(EXE): $(patsubst %.c,$(OBJ)/%.o,phase1_nada/phase1/rsa_tools.c phase1_nada/phase1/bezout.c phase1_nada/phase1/log.c phase1_loann/other_base64.c tests/test_io_errors.c)
 
 $(BIN)/test_gmp_rsa$(EXE): $(patsubst %.c,$(OBJ)/%.o,$(RSA) $(GMP_RSA) phase2_nada/tests_gmp_rsa.c)
 $(BIN)/test_gmp_rsa$(EXE): LDFLAGS += $(GMP_LDFLAGS)

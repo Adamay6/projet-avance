@@ -104,7 +104,7 @@ Le workflow GitHub Actions compile et teste sur Windows avec GCC, Linux avec GCC
 
 ## Fichiers conservés
 
-- `nada_phase1/` : types et outils RSA, clefs, log et étude MAX_PRIME.
+- `phase1_nada/` : types et outils RSA, clefs, log et étude MAX_PRIME.
 - `phase1_adam/` : chiffrement des octets, tableaux et fichiers, avec ses tests.
 - `phase1_loann/` : Base64 des tableaux et fichiers, avec ses tests.
 - `phase1_malek/` : main commun et fonctions d'appel aux autres modules.
@@ -115,7 +115,7 @@ Les changements par rapport au dépôt de départ sont notés dans [MODIFICATION
 
 ## Conventions utilisées
 
-Les types `rsaKey_t` et `keyPair_t` restent dans `nada_phase1/rsa_common_header.h`.
+Les types `rsaKey_t` et `keyPair_t` restent dans `phase1_nada/rsa_common_header.h`.
 
 Pour chiffrer un tableau, on utilise `chiffrer_tableau` d'Adam. Un octet clair donne un entier RSA sur 8 octets little endian. Un tableau de n octets demande donc une sortie de 8*n octets. Le déchiffrement restitue n octets. Les longueurs sont explicites : les octets nuls et le texte UTF-8 ne sont pas coupés. Les tableaux d'entrée et de sortie ne doivent pas se recouvrir.
 
