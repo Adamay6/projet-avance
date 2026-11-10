@@ -1,0 +1,21 @@
+addcontact alice
+Le Gall
+Chloé
+Groupe de TP
+addkeys alice
+travail
+crypt
+10001
+100040003
+listcontacts
+show alice/travail pub
+modifycontact alice
+3
+Commentaire mis à jour
+0
+listcontacts alice
+rmkeys alice/travail
+listcontacts alice
+rmcontact alice
+listcontacts
+quit
