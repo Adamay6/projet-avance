@@ -167,6 +167,7 @@ def tester():
     lancer("test_fichiers_blocs", "fichiers_blocs")
     lancer("test_blocs_io", "blocs_io")
     verifier_reference(BUILD / "tests" / "fichiers_blocs")
+    print("Phase 2 (Adam) : tous les tests sont OK.", flush=True)
     lancer("test_phase2_loann", "phase2_loann")
     print("\nTous les tests de la phase 2 sont passes.", flush=True)
 

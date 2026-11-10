@@ -86,6 +86,7 @@ test: all test-reference
 	cd build/tests/gmp && ../../bin/test_gmp_rsa$(EXE)
 	cd build/tests/fichiers_blocs && ../../bin/test_fichiers_blocs$(EXE)
 	cd build/tests/blocs_io && ../../bin/test_blocs_io$(EXE)
+	@echo "Phase 2 (Adam) : tous les tests sont OK."
 	cd build/tests/phase2_loann && ../../bin/test_phase2_loann$(EXE)
 
 test-reference: $(BIN)/test_base64$(EXE)
