@@ -44,6 +44,9 @@ PROGRAMMES = {
     "test_blocs_io": ["phase2_adam/tests/test_blocs_io.c"],
     "test_phase2_loann": BASE64 + GMP_RSA + FICHIERS_BLOCS +
                         ["phase2_loann/base64_v2.c", "tests/test_phase2_loann.c"],
+    "test_integration": RSA + GMP_RSA + FICHIERS_BLOCS + BASE64 + BASE64_V2 + COMMANDES_NADA
+                        + CONTACTS_ADAM + ["phase3_adam/contacts_interpreteur.c",
+                                           "tests/test_integration.c"],
     "test_commandes_nada": RSA + GMP_RSA + FICHIERS_BLOCS + BASE64 + BASE64_V2 + COMMANDES_NADA
                            + CONTACTS_ADAM + ["phase3_adam/contacts_interpreteur.c",
                                               "phase3_nada/tests_commandes_nada.c"],
@@ -53,7 +56,8 @@ PROGRAMMES = {
     "rejouer_contacts": CONTACTS_ADAM + ["phase3_adam/tests/rejouer_contacts.c"],
 }
 # Programmes des phases 2 et 3 qui ont besoin de la bibliotheque GMP.
-AVEC_GMP = {"test_gmp_rsa", "test_fichiers_blocs", "test_phase2_loann", "test_commandes_nada"}
+AVEC_GMP = {"test_gmp_rsa", "test_fichiers_blocs", "test_phase2_loann", "test_commandes_nada",
+            "test_integration"}
 
 
 def configurer_affichage_utf8():
@@ -189,6 +193,8 @@ def tester():
     verifier_contacts(BUILD / "tests/phase3_adam/contacts_reference.bin")
     print("Phase 3 (Adam) : tous les tests sont OK.", flush=True)
     print("\nTous les tests de la phase 3 sont passes.", flush=True)
+    lancer("test_integration", "integration")
+    print("\nTous les tests d'integration sont passes.", flush=True)
 
 
 def etude_maxprime():
