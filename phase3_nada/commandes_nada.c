@@ -54,5 +54,5 @@ int cmd_savepub(table_clefs_t *table, int argc, char **argv) {
     const entree_clef_t *e = table_chercher(table, argv[1]);
     if (e == NULL) return CMD_ERREUR_ID_INCONNU;
     /* export_pubkey_b64 renvoie 0 ou -1 : -1 vient d'une ecriture impossible (parametres deja verifies) */
-    return export_pubkey_b64(argv[2], &e->pub) == 0 ? CMD_SUCCES : RSA_ERREUR_FICHIER;
+    return export_pubkey_b64(argv[2], &e->pub, nom_type(e->type)) == 0 ? CMD_SUCCES : RSA_ERREUR_FICHIER;
 }

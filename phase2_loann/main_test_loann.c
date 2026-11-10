@@ -37,10 +37,11 @@ int main(void) {
     printf("[1/4] Export/Import Clé Publique Base64... ");
     rsaKey_t k1 = {.E = 65537, .N = 4294967291ULL};
     rsaKey_t k2 = {.E = 0, .N = 0};
+    char type[PUBKEY_TYPE_TAILLE] = "";
 
-    if (export_pubkey_b64("test_pub.b64", &k1) == 0 &&
-        import_pubkey_b64("test_pub.b64", &k2) == 0 &&
-        k1.E == k2.E && k1.N == k2.N) {
+    if (export_pubkey_b64("test_pub.b64", &k1, "crypt") == 0 &&
+        import_pubkey_b64("test_pub.b64", &k2, type) == 0 &&
+        k1.E == k2.E && k1.N == k2.N && strcmp(type, "crypt") == 0) {
         printf("OK\n");
     } else {
         printf("ÉCHEC\n");

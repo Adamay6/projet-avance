@@ -136,6 +136,7 @@ static void lire_fichier(const char *chemin, char *buf, size_t taille);
 
 static void test_savepub(void) {
     rsaKey_t pub, priv, pub_s, priv_s, importee = { 0, 0 };
+    char type[PUBKEY_TYPE_TAILLE] = "";
     VERIF(gen_keys_gmp(&pub, &priv, 27) == RSA_SUCCES);
     VERIF(gen_keys_gmp(&pub_s, &priv_s, 27) == RSA_SUCCES);
     entree_clef_t e[4];
@@ -145,18 +146,18 @@ static void test_savepub(void) {
     e[3] = (entree_clef_t){ "", CLEF_CRYPT, { 0, 0 }, { 0, 0 }, false };   /* rempli apres import */
     table_clefs_t t = { e, 3, 4 };
 
-    /* Le fichier contient exactement "DIYPG_PUBKEY_V2 <E> <N>" en base64 : jamais la clef privee. */
+    /* Le fichier contient exactement "DIYPG_PUBKEY_V3 <type> <E> <N>" en base64 : jamais la clef privee. */
     char *s[] = { "savepub", "alice", "alice_pub.b64" };
     char b64[256], attendu[128];
     VERIF(cmd_savepub(&t, 3, s) == CMD_SUCCES);
     lire_fichier("alice_pub.b64", b64, sizeof b64);
     size_t n = 0;
     unsigned char *clair = base64_decode(b64, strlen(b64), &n);
-    snprintf(attendu, sizeof attendu, "DIYPG_PUBKEY_V2 %" PRIu64 " %" PRIu64, pub.E, pub.N);
+    snprintf(attendu, sizeof attendu, "DIYPG_PUBKEY_V3 crypt %" PRIu64 " %" PRIu64, pub.E, pub.N);
     VERIF(clair != NULL && n == strlen(attendu) && memcmp(clair, attendu, n) == 0);
     free(clair);
-    VERIF(import_pubkey_b64("alice_pub.b64", &importee) == 0);
-    VERIF(importee.E == pub.E && importee.N == pub.N);
+    VERIF(import_pubkey_b64("alice_pub.b64", &importee, type) == 0);
+    VERIF(importee.E == pub.E && importee.N == pub.N && strcmp(type, "crypt") == 0);
 
     /* echange : un contact importe la clef, chiffre pour alice, alice dechiffre */
     e[3] = (entree_clef_t){ "alice_importee", CLEF_CRYPT, importee, { 0, 0 }, false };
@@ -173,9 +174,11 @@ static void test_savepub(void) {
     char *s_sign[] = { "savepub", "alice_sign", "sign_pub.b64" };
     char *s_pub[] = { "savepub", "bob_pub", "bob_pub.b64" };
     VERIF(cmd_savepub(&t, 3, s_sign) == CMD_SUCCES);
-    VERIF(import_pubkey_b64("sign_pub.b64", &importee) == 0 && importee.E == pub_s.E && importee.N == pub_s.N);
+    VERIF(import_pubkey_b64("sign_pub.b64", &importee, type) == 0 && importee.E == pub_s.E && importee.N == pub_s.N);
+    VERIF(strcmp(type, "sign") == 0);   /* le type sign est conserve */
     VERIF(cmd_savepub(&t, 3, s_pub) == CMD_SUCCES);
-    VERIF(import_pubkey_b64("bob_pub.b64", &importee) == 0 && importee.E == 65537 && importee.N == 0xdeadbeefULL);
+    VERIF(import_pubkey_b64("bob_pub.b64", &importee, type) == 0 && importee.E == 65537 && importee.N == 0xdeadbeefULL);
+    VERIF(strcmp(type, "crypt") == 0);
 
     char *court[] = { "savepub", "alice" }, *trop[] = { "savepub", "alice", "a.b64", "b.b64" };
     char *f_null[] = { "savepub", "alice", NULL }, *inconnu[] = { "savepub", "carole", "c.b64" };
