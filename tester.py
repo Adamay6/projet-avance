@@ -21,6 +21,7 @@ BASE64 = ["phase1_loann/base64.c", "phase1_loann/other_base64.c"]
 COMMUN = RSA + ["phase1_adam/chiffrement.c"] + BASE64
 GMP_RSA = ["phase2_nada/gmp_rsa.c", "phase2_nada/convert_bytes.c"]
 BLOCS_ADAM = ["phase2_adam/chiffrement_blocs.c", "phase2_adam/fichiers_gmp.c"]
+BASE64_V2 = ["phase2_loann/base64_v2.c"]
 COMMANDES_NADA = ["phase3_nada/table_clefs_provisoire.c", "phase3_nada/commandes_nada.c"]
 PROGRAMMES = {
     "test_phase1": COMMUN + ["phase1_adam/tests_chiffrement.c",
@@ -34,7 +35,7 @@ PROGRAMMES = {
     # Ce test inclut lui-meme keys_io.c et base64.c pour simuler les erreurs.
     "test_io_errors": [RSA[0], RSA[1], RSA[3], BASE64[1], "tests/test_io_errors.c"],
     "test_gmp_rsa": RSA + GMP_RSA + ["phase2_nada/tests_gmp_rsa.c"],
-    "test_commandes_nada": RSA + GMP_RSA + BLOCS_ADAM + COMMANDES_NADA
+    "test_commandes_nada": RSA + GMP_RSA + BLOCS_ADAM + BASE64 + BASE64_V2 + COMMANDES_NADA
                            + ["phase3_nada/tests_commandes_nada.c"],
 }
 # Programmes de la phase 2 qui ont besoin de la bibliotheque GMP.
