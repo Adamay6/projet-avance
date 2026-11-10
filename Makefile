@@ -25,13 +25,14 @@ CHIFFREMENT = phase1_adam/chiffrement.c
 BASE64 = phase1_loann/base64.c phase1_loann/other_base64.c
 TESTS_MODULES = phase1_adam/tests_chiffrement.c phase1_loann/tests_base64.c
 GMP_RSA = phase2_nada/gmp_rsa.c phase2_nada/convert_bytes.c
+BLOCS_ADAM = phase2_adam/chiffrement_blocs.c phase2_adam/fichiers_gmp.c
 COMMANDES_NADA = phase3_nada/table_clefs_provisoire.c phase3_nada/commandes_nada.c
 COMMUN = $(RSA) $(CHIFFREMENT) $(BASE64)
 SOURCES = $(COMMUN) $(TESTS_MODULES) phase1_malek/phase1.c phase1_malek/main_phase1.c \
           phase1_nada/phase1/test_cles.c phase1_nada/phase1/test_maxprime.c \
           phase1_loann/main_test_loann.c tests/test_regressions.c tests/test_io_errors.c \
           $(GMP_RSA) phase2_nada/tests_gmp_rsa.c \
-          $(COMMANDES_NADA) phase3_nada/tests_commandes_nada.c
+          $(BLOCS_ADAM) $(COMMANDES_NADA) phase3_nada/tests_commandes_nada.c
 
 all: $(BIN)/test_phase1$(EXE) $(BIN)/test_cles$(EXE) $(BIN)/test_maxprime$(EXE) \
      $(BIN)/test_base64$(EXE) $(BIN)/test_regressions$(EXE) $(BIN)/test_io_errors$(EXE) \
@@ -55,7 +56,11 @@ $(BIN)/test_gmp_rsa$(EXE): LDFLAGS += $(GMP_LDFLAGS)
 $(BIN)/test_gmp_rsa$(EXE): LDLIBS += -lgmp
 $(OBJ)/phase2_nada/%.o: CPPFLAGS += $(GMP_CPPFLAGS)
 
-$(BIN)/test_commandes_nada$(EXE): $(patsubst %.c,$(OBJ)/%.o,$(RSA) $(COMMANDES_NADA) phase3_nada/tests_commandes_nada.c)
+# crypt / uncrypt utilisent les fichiers par blocs d'Adam (phase 2), donc GMP.
+$(BIN)/test_commandes_nada$(EXE): $(patsubst %.c,$(OBJ)/%.o,$(RSA) $(GMP_RSA) $(BLOCS_ADAM) $(COMMANDES_NADA) phase3_nada/tests_commandes_nada.c)
+$(BIN)/test_commandes_nada$(EXE): LDFLAGS += $(GMP_LDFLAGS)
+$(BIN)/test_commandes_nada$(EXE): LDLIBS += -lgmp
+$(OBJ)/phase2_adam/%.o $(OBJ)/phase3_nada/%.o: CPPFLAGS += $(GMP_CPPFLAGS)
 
 $(BIN)/%$(EXE):
 	@mkdir -p $(BIN)
