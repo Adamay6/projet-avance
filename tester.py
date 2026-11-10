@@ -45,7 +45,8 @@ PROGRAMMES = {
     "test_phase2_loann": BASE64 + GMP_RSA + FICHIERS_BLOCS +
                         ["phase2_loann/base64_v2.c", "tests/test_phase2_loann.c"],
     "test_commandes_nada": RSA + GMP_RSA + FICHIERS_BLOCS + BASE64 + BASE64_V2 + COMMANDES_NADA
-                           + ["phase3_nada/tests_commandes_nada.c"],
+                           + CONTACTS_ADAM + ["phase3_adam/contacts_interpreteur.c",
+                                              "phase3_nada/tests_commandes_nada.c"],
     "test_contacts": CONTACTS_ADAM + ["phase3_adam/contacts_interpreteur.c",
                                      "phase3_adam/tests/test_contacts.c"],
     "test_contacts_memoire": ["phase3_adam/tests/test_contacts_memoire.c"],

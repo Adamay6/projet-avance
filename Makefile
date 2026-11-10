@@ -75,7 +75,8 @@ $(OBJ)/phase2_adam/fichiers_gmp.o $(OBJ)/phase2_adam/tests/test_fichiers_blocs.o
 $(OBJ)/tests/test_phase2_loann.o: CPPFLAGS += $(GMP_CPPFLAGS)
 
 # crypt / uncrypt utilisent les fichiers par blocs d'Adam (phase 2), donc GMP ; savepub le base64 de Loann.
-$(BIN)/test_commandes_nada$(EXE): $(patsubst %.c,$(OBJ)/%.o,$(RSA) $(GMP_RSA) $(FICHIERS_BLOCS) $(BASE64) $(BASE64_V2) $(COMMANDES_NADA) phase3_nada/tests_commandes_nada.c)
+$(BIN)/test_commandes_nada$(EXE): $(patsubst %.c,$(OBJ)/%.o,$(RSA) $(GMP_RSA) $(FICHIERS_BLOCS) $(BASE64) $(BASE64_V2) $(COMMANDES_NADA) \
+                                  $(CONTACTS_ADAM) phase3_adam/contacts_interpreteur.c phase3_nada/tests_commandes_nada.c)
 $(OBJ)/phase3_nada/%.o: CPPFLAGS += $(GMP_CPPFLAGS)
 
 $(BIN)/test_contacts$(EXE): $(patsubst %.c,$(OBJ)/%.o,$(CONTACTS_ADAM) phase3_adam/contacts_interpreteur.c phase3_adam/tests/test_contacts.c)
