@@ -4,7 +4,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
-#include "../nada_phase1/rsa_common_header.h"
+#include "../phase1_nada/rsa_common_header.h"
 
 int export_pubkey_b64(const char *filename, const rsaKey_t *key);
 int import_pubkey_b64(const char *filename, rsaKey_t *key);
