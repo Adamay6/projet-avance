@@ -25,15 +25,21 @@ Pour addkeys, un identifiant exact est prioritaire sur un nom de famille.
 Si plusieurs contacts portent le même nom, utiliser leur identifiant.
 Les clefs sont publiques, avec un type crypt ou sign. L'ajout vérifie
 0 < E < N et N > 1 ; ce n'est pas une preuve de validité mathématique de la clef.
-Les fonctions de chiffrement restent responsables de leurs bornes propres.
+Une clef crypt doit en plus avoir N > 2^32 - 1, sinon le chiffrement par blocs
+de 4 octets la refuserait.
+
+Une référence s'écrit contact/clef, ou contact seul si le contact n'a qu'une
+clef (interprète.pdf : « celui de la clef s'il en a plusieurs »). Un contact seul
+avec plusieurs clefs donne CONTACTS_ERREUR_AMBIGU. rmkeys exige contact/clef.
 
 ## Raccordement à l'interpréteur
 
 Après avoir découpé une ligne, Loann peut appeler :
 
-    contacts_executer(&contacts, commande, argc, argv, entree, sortie);
+    contacts_executer(&contacts, argc, (const char *const *)argv, entree, sortie);
 
-argc et argv contiennent seulement les arguments, sans le nom de commande.
+Même convention que commande_t de phase3_nada/interpreteur.h : argv[0] est
+le nom de la commande, comme pour main.
 Les flux sont généralement stdin et stdout. Ils peuvent aussi être des
 fichiers pour rejouer un scénario.
 
@@ -55,15 +61,19 @@ ne modifie pas le contact. E et N sont saisis en hexadécimal, avec ou sans 0x.
 
 Le retour 0 indique un succès. Le retour 1, CONTACTS_COMMANDE_INCONNUE, signifie
 que la commande doit être traitée par l'interpréteur V1. Les autres retours
-sont négatifs ; contacts_message_erreur donne leur texte.
+sont négatifs, de -20 à -30, pour ne pas se confondre avec les codes RSA_*
+(-1 à -5) et CMD_* (-10 à -14) ; contacts_message_erreur donne leur texte.
 Le module ne prend pas en charge save, load, crypt ou les show/rmkeys sans /.
 
 Pour chiffrer vers un contact, contacts_resoudre avec CONTACT_CRYPT fournit
 la clef publique de contact/clef. Une clef de signature est refusée dans ce cas.
+Les commandes crypt, uncrypt, show et savepub de Nada (phase3_nada) utilisent
+déjà contacts_resoudre_entree : table_clefs_t.contacts pointe vers l'annuaire.
 Dans contacts_interpreteur.h, contacts_resoudre_entree fournit une copie au
 format entree_clef_t du header proposé pour l'interpréteur. Elle traduit le
 type, place l'identifiant de la clef dans id et marque a_priv à false. En cas
-de référence mal formée ou inconnue, la fonction renvoie le code CMD correspondant.
+de référence mal formée, inconnue ou ambiguë, la fonction renvoie le code CMD
+correspondant (CMD_ERREUR_SYNTAXE, CMD_ERREUR_ID_INCONNU, CMD_ERREUR_AMBIGU).
 L'interpréteur peut ainsi utiliser la partie publique pour crypt, show et savepub.
 Pour uncrypt, a_priv permet de signaler que la clef privée est absente.
 
