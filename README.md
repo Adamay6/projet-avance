@@ -1,4 +1,4 @@
-# DIYPG — phases 1 et 2
+# DIYPG — phases 1 à 3
 
 Version commune des parties de Nada, Adam, Loann et Malek. Le point de départ est le commit `3772eaba` de la branche `phase1`.
 
@@ -7,11 +7,11 @@ Version commune des parties de Nada, Adam, Loann et Malek. Le point de départ e
 Depuis GitHub, cloner la branche du groupe ou télécharger son ZIP. Après extraction, ouvrir un terminal dans `projet-avance`, au même niveau que ce README. Aucun chemin n'est à modifier dans les sources.
 
 ```sh
-git clone --branch phase1-commune https://github.com/nadaaraba/projet-avance.git
+git clone --branch phase3 https://github.com/nadaaraba/projet-avance.git
 cd projet-avance
 ```
 
-La branche `phase1-commune` contient la version commune proposée au groupe. Son intégration à `phase1` se fait après relecture. La phase 2 est développée sur la branche `phase2`, partie de `phase1-commune` (voir [Phase 2 — RSA avec GMP](#phase-2--rsa-avec-gmp)).
+Le groupe utilise une branche par phase : `phase1` (version commune de la phase 1), `phase2` et `phase3`. Chaque branche contient aussi les phases précédentes ; `phase3` est la plus complète. Voir [Phase 2 — RSA avec GMP](#phase-2--rsa-avec-gmp) et [Phase 3 — interprète et annuaire de clefs](#phase-3--interprète-et-annuaire-de-clefs).
 
 ## Compiler et tester
 
@@ -92,7 +92,11 @@ Les exécutables sont dans `build/bin` :
 - `test_regressions` : cas limites et aller-retour complet RSA/Base64 ;
 - `test_io_errors` : erreurs de lecture, d'écriture et de fermeture simulées ;
 - `test_maxprime` : étude du dépassement de capacité ;
-- `test_gmp_rsa` : phase 2, puissance modulaire GMP, clefs avec N > 2^32 et chiffrement de blocs de 4 octets.
+- `test_gmp_rsa` : phase 2 (Nada), puissance modulaire GMP, clefs avec N > 2^32 et chiffrement de blocs de 4 octets ;
+- `test_fichiers_blocs`, `test_blocs_io` : phase 2 (Adam), fichiers par blocs et erreurs d'entrée-sortie ;
+- `test_phase2_loann` : phase 2 (Loann), export et import des clefs publiques, fichiers chiffrés en Base64 ;
+- `test_commandes_nada` : phase 3 (Nada), commandes `show`, `crypt`, `uncrypt` et `savepub`, avec des clefs de contacts ;
+- `test_contacts`, `test_contacts_memoire`, `rejouer_contacts` : phase 3 (Adam), contacts V2, échecs d'allocation simulés et scénario de commandes rejoué.
 
 Sous Windows, les noms finissent par `.exe`. Le main crée ses fichiers dans le dossier depuis lequel il est lancé : utiliser le lanceur ou `make test` permet de garder tous ces fichiers dans `build/tests`. La commande `clean` enlève uniquement le dossier `build`.
 
@@ -110,6 +114,10 @@ Le workflow GitHub Actions compile et teste sur Windows avec GCC, Linux avec GCC
 - `phase1_malek/` : main commun et fonctions d'appel aux autres modules.
 - `tests/` : cas ajoutés après l'audit et relevé des nouvelles mesures.
 - `phase2_nada/` : phase 2, RSA avec GMP et blocs de 4 octets (voir plus bas).
+- `phase2_adam/` : phase 2, chiffrement des fichiers par blocs (format `DIYPG2`).
+- `phase2_loann/` : phase 2, Base64 des fichiers chiffrés, export et import des clefs publiques, envoi par mail.
+- `phase3_nada/` : phase 3, interface commune de l'interprète et commandes `show`, `crypt`, `uncrypt`, `savepub`.
+- `phase3_adam/` : phase 3, contacts V2 et syntaxe `contact/clef`.
 
 Les changements par rapport au dépôt de départ sont notés dans [MODIFICATIONS.md](MODIFICATIONS.md). Les commentaires des parties conservées ont été gardés.
 
@@ -203,7 +211,7 @@ Les en-têtes et la bibliothèque sont cherchés dans les chemins par défaut du
 
 ### Lancer les tests
 
-Les tests de la phase 2 sont compris dans les commandes habituelles, après ceux de la phase 1 :
+Les tests de la phase 2 sont compris dans les commandes habituelles, après ceux de la phase 1 (ceux de la phase 3 suivent) :
 
 ```sh
 python3 tester.py        # ou .\tester.cmd sous Windows
@@ -218,3 +226,64 @@ mkdir -p build/tests/gmp && cd build/tests/gmp && ../../bin/test_gmp_rsa
 ```
 
 Si GMP est introuvable, la compilation de `test_gmp_rsa` échoue et le lanceur renvoie vers cette section. Le workflow GitHub installe GMP sur les trois systèmes avant les tests.
+
+### Partie d'Adam : `phase2_adam/`
+
+`chiffrer_fichier_blocs_gmp` et `dechiffrer_fichier_blocs_gmp` chiffrent un fichier entier par blocs de 4 octets avec les fonctions GMP de Nada. Le format `DIYPG2` commence par une signature et la longueur du clair, puis un entier de 8 octets little endian par bloc ; le dernier bloc est complété par des zéros et la longueur exacte est restituée. Le résultat est préparé dans un fichier temporaire : une erreur ne remplace pas la destination. Détails dans [phase2_adam/README.md](phase2_adam/README.md).
+
+### Partie de Loann : `phase2_loann/`
+
+- `export_pubkey_b64` / `import_pubkey_b64` : clef publique dans un fichier texte, `DIYPG_PUBKEY_V3 <type> <E> <N>` encodé en Base64, avec `<type>` = `crypt` ou `sign`. Un type inconnu ou l'ancien format sans type est refusé.
+- `chiffrer_fichier_blocs_b64` / `dechiffrer_fichier_blocs_b64` : fichier chiffré par blocs puis converti en Base64, pour l'envoi par mail.
+- `email_sender.c` : envoi d'une pièce jointe Base64 avec `curl`. Il n'est pas lancé par les tests communs, qui ne doivent pas dépendre du réseau.
+
+## Phase 3 — interprète et annuaire de clefs
+
+La syntaxe suit le document `interprète.pdf` du sujet. `<keyid>` désigne une clef de l'utilisateur ou, en V2, une clef de contact : `contact/clef`, ou `contact` seul s'il n'a qu'une clef. Les clefs de l'utilisateur sont cherchées en premier.
+
+### Commandes
+
+| Commande | Module | État |
+|---|---|---|
+| `crypt <fileIn> <fileOut> <keyid>` | Nada | ✅ type `crypt` exigé ; clef de contact acceptée |
+| `uncrypt <fileIn> <fileOut> <keyid>` | Nada | ✅ clef privée exigée (refusé pour un contact) |
+| `show <keyid> ["pub"] ["priv"]` | Nada | ✅ hexadécimal ; sans option, les deux clefs |
+| `savepub <keyid> <file>` | Nada | ✅ format `DIYPG_PUBKEY_V3` en Base64 |
+| `listcontacts [<idcontact>] [<nom>]`, `addcontact <id>`, `modifycontact <id>` | Adam | ✅ menus de saisie |
+| `addkeys <id> ou <nom>`, `rmcontact <id>`, `rmkeys <contact/clef>` | Adam | ✅ |
+| `quit`, `listkeys [<keyid>]`, `rmkeys <keyid>`, `newkeys <keyid> <type>` | Loann | en cours |
+| `bin-2b64 <filein> <fileout>`, `b64-2bin <filein> <fileout>` | Loann | en cours |
+| `save [<fileout>]`, `load [<filein>]` (fichier protégé) | Loann | en cours ; la section contacts d'Adam est prête |
+| `main` de l'application (boucle de lecture, découpage, aide) | Loann | en cours |
+
+`newkeys` doit produire ses clefs avec `gen_keys_gmp` : le chiffrement par blocs refuse les clefs de la phase 1 (N ≤ 2^32).
+
+### Interface commune : `phase3_nada/interpreteur.h`
+
+Validée par le groupe. Elle définit :
+
+- `entree_clef_t` : identifiant, type (`CLEF_CRYPT` ou `CLEF_SIGN`), clef publique, clef privée et `a_priv` ;
+- `table_clefs_t` : la table des clefs, avec le champ `contacts` qui pointe vers l'annuaire d'Adam (NULL sans contacts) ;
+- `commande_t` : `int commande(table_clefs_t *table, int argc, char **argv)`, où `argv[0]` est le nom de la commande, comme pour `main` ;
+- les codes de l'interprète.
+
+`table_clefs_provisoire.c` contient une version provisoire de `table_chercher` ; elle sera remplacée par le module de table de Loann.
+
+| Codes | Valeurs | Origine |
+|---|---|---|
+| `RSA_SUCCES` / `CMD_SUCCES` / `CONTACTS_SUCCES` | 0 | succès |
+| `RSA_*` | -1 à -5 | chiffrement et fichiers (`phase1_adam/chiffrement.h`) |
+| `CMD_ERREUR_SYNTAXE`, `_ID_INCONNU`, `_TYPE`, `_PAS_DE_PRIVEE`, `_AMBIGU` | -10 à -14 | interprète (`interpreteur.h`) |
+| `CONTACTS_*` | -20 à -30 | contacts (`phase3_adam/contacts.h`), texte avec `contacts_message_erreur` |
+| `CONTACTS_COMMANDE_INCONNUE` | 1 | commande à traiter par l'interprète V1 |
+
+Le parseur peut appeler `contacts_executer` d'Adam avec les mêmes `argc` et `argv`, puis les commandes V1 si le retour vaut 1. Détails dans [phase3_adam/README.md](phase3_adam/README.md).
+
+### Tests de la phase 3
+
+Ils sont compris dans `python3 tester.py` et `make test` :
+
+- `test_commandes_nada` : aller-retour `crypt`/`uncrypt` sur 0, 1, 3, 4, 5 et 1000 octets et un fichier binaire, clefs de contacts, contact ambigu, mauvais type, clef de la phase 1, fichier absent, mauvaise clef, options de `show` et texte affiché, contenu exact du fichier de `savepub` ;
+- les tests d'Adam : contacts, sauvegarde et chargement, échecs d'allocation, et un scénario de commandes rejoué depuis `phase3_adam/tests/scenario_contacts.txt`.
+
+Le script de commandes de l'interprète complet sera ajouté avec le `main` de Loann.
