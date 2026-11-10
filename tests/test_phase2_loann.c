@@ -20,14 +20,32 @@ int main(void)
     uint8_t retour[sizeof clair + 1];
     rsaKey_t publique, privee;
     rsaKey_t importee = {0};
+    char type[PUBKEY_TYPE_TAILLE] = "";
+
+    FILE *fichier = NULL;
 
     initialiser_console_utf8();
     VERIFIER(gen_keys_gmp(&publique, &privee, 31) == RSA_SUCCES);
-    VERIFIER(export_pubkey_b64("publique.b64", &publique) == 0);
-    VERIFIER(import_pubkey_b64("publique.b64", &importee) == 0);
+    VERIFIER(export_pubkey_b64("publique.b64", &publique, "crypt") == 0);
+    VERIFIER(import_pubkey_b64("publique.b64", &importee, type) == 0);
     VERIFIER(importee.E == publique.E && importee.N == publique.N);
+    VERIFIER(strcmp(type, "crypt") == 0);
 
-    FILE *fichier = fopen("source.bin", "wb");
+    /* Le type est conserve, et un type inconnu est refuse a l'export comme a l'import. */
+    rsaKey_t signature = {0};
+    VERIFIER(export_pubkey_b64("signature.b64", &publique, "sign") == 0);
+    VERIFIER(import_pubkey_b64("signature.b64", &signature, type) == 0);
+    VERIFIER(strcmp(type, "sign") == 0 && signature.N == publique.N);
+    VERIFIER(export_pubkey_b64("inconnu.b64", &publique, "autre") == -1);
+    VERIFIER(export_pubkey_b64("inconnu.b64", &publique, NULL) == -1);
+    fichier = fopen("ancien.b64", "w");   /* "DIYPG_PUBKEY_V2 3 33" : ancien format, sans type */
+    VERIFIER(fichier != NULL);
+    VERIFIER(fputs("RElZUEdfUFVCS0VZX1YyIDMgMzM=", fichier) != EOF);
+    VERIFIER(fclose(fichier) == 0);
+    VERIFIER(import_pubkey_b64("ancien.b64", &importee, type) == -1);
+    VERIFIER(importee.N == publique.N && strcmp(type, "sign") == 0);   /* rien n'est modifie */
+
+    fichier = fopen("source.bin", "wb");
     VERIFIER(fichier != NULL);
     size_t taille = fwrite(clair, 1, sizeof clair, fichier);
     int fermeture = fclose(fichier);

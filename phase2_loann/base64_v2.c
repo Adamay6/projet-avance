@@ -7,11 +7,15 @@
 #include <ctype.h>
 #include <inttypes.h>
 
-int export_pubkey_b64(const char *filename, const rsaKey_t *key) {
-    if (!filename || !key) return -1;
+static int type_valide(const char *type) {
+    return type && (strcmp(type, "crypt") == 0 || strcmp(type, "sign") == 0);
+}
+
+int export_pubkey_b64(const char *filename, const rsaKey_t *key, const char *type) {
+    if (!filename || !key || !type_valide(type)) return -1;
 
     char buffer[128];
-    int len = snprintf(buffer, sizeof(buffer), "DIYPG_PUBKEY_V2 %" PRIu64 " %" PRIu64, key->E, key->N);
+    int len = snprintf(buffer, sizeof(buffer), "DIYPG_PUBKEY_V3 %s %" PRIu64 " %" PRIu64, type, key->E, key->N);
     if (len < 0 || len >= (int)sizeof(buffer)) return -1;
 
     size_t b64_len = 0;
@@ -30,8 +34,8 @@ int export_pubkey_b64(const char *filename, const rsaKey_t *key) {
     return ok ? 0 : -1;
 }
 
-int import_pubkey_b64(const char *filename, rsaKey_t *key) {
-    if (!filename || !key) return -1;
+int import_pubkey_b64(const char *filename, rsaKey_t *key, char type[PUBKEY_TYPE_TAILLE]) {
+    if (!filename || !key || !type) return -1;
 
     FILE *f = fopen(filename, "r");
     if (!f) return -1;
@@ -83,16 +87,17 @@ int import_pubkey_b64(const char *filename, rsaKey_t *key) {
     plain_str[dec_len] = '\0';
     free(decoded_str);
 
-    char header[32];
+    char header[32], type_lu[PUBKEY_TYPE_TAILLE];
     uint64_t e = 0, n = 0;
-    if (sscanf(plain_str, "%31s %" SCNu64 " %" SCNu64, header, &e, &n) != 3 ||
-        strcmp(header, "DIYPG_PUBKEY_V2") != 0) {
+    if (sscanf(plain_str, "%31s %5s %" SCNu64 " %" SCNu64, header, type_lu, &e, &n) != 4 ||
+        strcmp(header, "DIYPG_PUBKEY_V3") != 0 || !type_valide(type_lu)) {
         free(plain_str);
         return -1;
     }
 
     key->E = e;
     key->N = n;
+    strcpy(type, type_lu);
     free(plain_str);
     return 0;
 }
