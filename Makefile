@@ -28,6 +28,9 @@ GMP_RSA = phase2_nada/gmp_rsa.c phase2_nada/convert_bytes.c
 FICHIERS_BLOCS = phase2_adam/chiffrement_blocs.c phase2_adam/fichiers_gmp.c
 BASE64_V2 = phase2_loann/base64_v2.c
 COMMANDES_NADA = phase3_nada/table_clefs_provisoire.c phase3_nada/commandes_nada.c
+CONTACTS_ADAM = phase3_adam/contacts.c phase3_adam/contacts_io.c phase3_adam/contacts_commandes.c
+TESTS_CONTACTS = $(BIN)/test_contacts$(EXE) $(BIN)/test_contacts_memoire$(EXE) \
+                 $(BIN)/rejouer_contacts$(EXE)
 TESTS_GMP = $(BIN)/test_gmp_rsa$(EXE) $(BIN)/test_fichiers_blocs$(EXE) \
             $(BIN)/test_phase2_loann$(EXE) $(BIN)/test_commandes_nada$(EXE)
 COMMUN = $(RSA) $(CHIFFREMENT) $(BASE64)
@@ -36,11 +39,13 @@ SOURCES = $(COMMUN) $(TESTS_MODULES) phase1_malek/phase1.c phase1_malek/main_pha
           phase1_loann/main_test_loann.c tests/test_regressions.c tests/test_io_errors.c \
           $(GMP_RSA) phase2_nada/tests_gmp_rsa.c $(FICHIERS_BLOCS) $(BASE64_V2) \
           phase2_adam/tests/test_fichiers_blocs.c phase2_adam/tests/test_blocs_io.c \
-          tests/test_phase2_loann.c $(COMMANDES_NADA) phase3_nada/tests_commandes_nada.c
+          tests/test_phase2_loann.c $(COMMANDES_NADA) phase3_nada/tests_commandes_nada.c \
+          $(CONTACTS_ADAM) phase3_adam/contacts_interpreteur.c phase3_adam/tests/test_contacts.c \
+          phase3_adam/tests/test_contacts_memoire.c phase3_adam/tests/rejouer_contacts.c
 
 all: $(BIN)/test_phase1$(EXE) $(BIN)/test_cles$(EXE) $(BIN)/test_maxprime$(EXE) \
      $(BIN)/test_base64$(EXE) $(BIN)/test_regressions$(EXE) $(BIN)/test_io_errors$(EXE) \
-     $(TESTS_GMP) $(BIN)/test_blocs_io$(EXE)
+     $(TESTS_GMP) $(BIN)/test_blocs_io$(EXE) $(TESTS_CONTACTS)
 
 $(BIN)/test_phase1$(EXE): $(patsubst %.c,$(OBJ)/%.o,$(COMMUN) $(TESTS_MODULES) phase1_malek/phase1.c phase1_malek/main_phase1.c)
 
@@ -73,6 +78,12 @@ $(OBJ)/tests/test_phase2_loann.o: CPPFLAGS += $(GMP_CPPFLAGS)
 $(BIN)/test_commandes_nada$(EXE): $(patsubst %.c,$(OBJ)/%.o,$(RSA) $(GMP_RSA) $(FICHIERS_BLOCS) $(BASE64) $(BASE64_V2) $(COMMANDES_NADA) phase3_nada/tests_commandes_nada.c)
 $(OBJ)/phase3_nada/%.o: CPPFLAGS += $(GMP_CPPFLAGS)
 
+$(BIN)/test_contacts$(EXE): $(patsubst %.c,$(OBJ)/%.o,$(CONTACTS_ADAM) phase3_adam/contacts_interpreteur.c phase3_adam/tests/test_contacts.c)
+
+$(BIN)/test_contacts_memoire$(EXE): $(OBJ)/phase3_adam/tests/test_contacts_memoire.o
+
+$(BIN)/rejouer_contacts$(EXE): $(patsubst %.c,$(OBJ)/%.o,$(CONTACTS_ADAM) phase3_adam/tests/rejouer_contacts.c)
+
 $(BIN)/%$(EXE):
 	@mkdir -p $(BIN)
 	$(CC) $(CFLAGS) $(LDFLAGS) $^ $(LDLIBS) -o $@
@@ -84,6 +95,7 @@ $(OBJ)/%.o: %.c Makefile
 test: all test-reference
 	@mkdir -p build/tests/commun build/tests/cles build/tests/regressions build/tests/io build/tests/gmp
 	@mkdir -p build/tests/fichiers_blocs build/tests/blocs_io build/tests/phase2_loann build/tests/phase3
+	@mkdir -p build/tests/phase3_adam
 	cd build/tests/cles && ../../bin/test_cles$(EXE) 10000 20261015
 	cd build/tests/commun && ../../bin/test_phase1$(EXE)
 	cd build/tests/regressions && ../../bin/test_regressions$(EXE)
@@ -94,6 +106,10 @@ test: all test-reference
 	@echo "Phase 2 (Adam) : tous les tests sont OK."
 	cd build/tests/phase2_loann && ../../bin/test_phase2_loann$(EXE)
 	cd build/tests/phase3 && ../../bin/test_commandes_nada$(EXE)
+	cd build/tests/phase3_adam && ../../bin/test_contacts$(EXE)
+	cd build/tests/phase3_adam && ../../bin/test_contacts_memoire$(EXE)
+	cd build/tests/phase3_adam && ../../bin/rejouer_contacts$(EXE) ../../../phase3_adam/tests/scenario_contacts.txt
+	@echo "Phase 3 (Adam) : tous les tests sont OK."
 
 test-reference: $(BIN)/test_base64$(EXE)
 	@mkdir -p build/tests/reference
