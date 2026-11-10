@@ -25,15 +25,21 @@ CHIFFREMENT = phase1_adam/chiffrement.c
 BASE64 = phase1_loann/base64.c phase1_loann/other_base64.c
 TESTS_MODULES = phase1_adam/tests_chiffrement.c phase1_loann/tests_base64.c
 GMP_RSA = phase2_nada/gmp_rsa.c phase2_nada/convert_bytes.c
+FICHIERS_BLOCS = phase2_adam/chiffrement_blocs.c phase2_adam/fichiers_gmp.c
+BASE64_V2 = phase2_loann/base64_v2.c
+TESTS_GMP = $(BIN)/test_gmp_rsa$(EXE) $(BIN)/test_fichiers_blocs$(EXE) \
+            $(BIN)/test_phase2_loann$(EXE)
 COMMUN = $(RSA) $(CHIFFREMENT) $(BASE64)
 SOURCES = $(COMMUN) $(TESTS_MODULES) phase1_malek/phase1.c phase1_malek/main_phase1.c \
           phase1_nada/phase1/test_cles.c phase1_nada/phase1/test_maxprime.c \
           phase1_loann/main_test_loann.c tests/test_regressions.c tests/test_io_errors.c \
-          $(GMP_RSA) phase2_nada/tests_gmp_rsa.c
+          $(GMP_RSA) phase2_nada/tests_gmp_rsa.c $(FICHIERS_BLOCS) $(BASE64_V2) \
+          phase2_adam/tests/test_fichiers_blocs.c phase2_adam/tests/test_blocs_io.c \
+          tests/test_phase2_loann.c
 
 all: $(BIN)/test_phase1$(EXE) $(BIN)/test_cles$(EXE) $(BIN)/test_maxprime$(EXE) \
      $(BIN)/test_base64$(EXE) $(BIN)/test_regressions$(EXE) $(BIN)/test_io_errors$(EXE) \
-     $(BIN)/test_gmp_rsa$(EXE)
+     $(TESTS_GMP) $(BIN)/test_blocs_io$(EXE)
 
 $(BIN)/test_phase1$(EXE): $(patsubst %.c,$(OBJ)/%.o,$(COMMUN) $(TESTS_MODULES) phase1_malek/phase1.c phase1_malek/main_phase1.c)
 
@@ -49,9 +55,18 @@ $(BIN)/test_regressions$(EXE): $(patsubst %.c,$(OBJ)/%.o,$(COMMUN) phase1_malek/
 $(BIN)/test_io_errors$(EXE): $(patsubst %.c,$(OBJ)/%.o,phase1_nada/phase1/rsa_tools.c phase1_nada/phase1/bezout.c phase1_nada/phase1/log.c phase1_loann/other_base64.c tests/test_io_errors.c)
 
 $(BIN)/test_gmp_rsa$(EXE): $(patsubst %.c,$(OBJ)/%.o,$(RSA) $(GMP_RSA) phase2_nada/tests_gmp_rsa.c)
-$(BIN)/test_gmp_rsa$(EXE): LDFLAGS += $(GMP_LDFLAGS)
-$(BIN)/test_gmp_rsa$(EXE): LDLIBS += -lgmp
+
+$(BIN)/test_fichiers_blocs$(EXE): $(patsubst %.c,$(OBJ)/%.o,$(GMP_RSA) $(FICHIERS_BLOCS) phase2_adam/tests/test_fichiers_blocs.c)
+
+$(BIN)/test_blocs_io$(EXE): $(OBJ)/phase2_adam/tests/test_blocs_io.o
+
+$(BIN)/test_phase2_loann$(EXE): $(patsubst %.c,$(OBJ)/%.o,$(BASE64) $(GMP_RSA) $(FICHIERS_BLOCS) $(BASE64_V2) tests/test_phase2_loann.c)
+
+$(TESTS_GMP): LDFLAGS += $(GMP_LDFLAGS)
+$(TESTS_GMP): LDLIBS += -lgmp
 $(OBJ)/phase2_nada/%.o: CPPFLAGS += $(GMP_CPPFLAGS)
+$(OBJ)/phase2_adam/fichiers_gmp.o $(OBJ)/phase2_adam/tests/test_fichiers_blocs.o \
+$(OBJ)/tests/test_phase2_loann.o: CPPFLAGS += $(GMP_CPPFLAGS)
 
 $(BIN)/%$(EXE):
 	@mkdir -p $(BIN)
@@ -63,11 +78,15 @@ $(OBJ)/%.o: %.c Makefile
 
 test: all test-reference
 	@mkdir -p build/tests/commun build/tests/cles build/tests/regressions build/tests/io build/tests/gmp
+	@mkdir -p build/tests/fichiers_blocs build/tests/blocs_io build/tests/phase2_loann
 	cd build/tests/cles && ../../bin/test_cles$(EXE) 10000 20261015
 	cd build/tests/commun && ../../bin/test_phase1$(EXE)
 	cd build/tests/regressions && ../../bin/test_regressions$(EXE)
 	cd build/tests/io && ../../bin/test_io_errors$(EXE)
 	cd build/tests/gmp && ../../bin/test_gmp_rsa$(EXE)
+	cd build/tests/fichiers_blocs && ../../bin/test_fichiers_blocs$(EXE)
+	cd build/tests/blocs_io && ../../bin/test_blocs_io$(EXE)
+	cd build/tests/phase2_loann && ../../bin/test_phase2_loann$(EXE)
 
 test-reference: $(BIN)/test_base64$(EXE)
 	@mkdir -p build/tests/reference
