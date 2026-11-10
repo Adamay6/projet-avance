@@ -7,22 +7,23 @@
 #include "../phase1_loann/base64.h"
 #include "../console_utf8.h"
 
-void exemple_envoi(void) {
+int exemple_envoi(void) {
     email_config_t mail_cfg = {
         .smtp_server = "smtp.gmail.com",
         .smtp_port = "587",
-        .username = "diypg.groj@gmail.com",
+        .username = "diypg.gproj@gmail.com",
         .password = "bhir qlzd dpyq amvj",
-        .from = "diypg.groj@gmail.com",
+        .from = "diypg.gproj@gmail.com",
         .to = "mloann2802@gmail.com"
     };
 
     int status = send_email_curl_cmd(&mail_cfg, "Fichier chiffre DIYPG Phase 2", "test_cipher.b64");
     if (status == 0) {
-        printf("E-mail envoye avec succes !\n");
+        printf("OK\n");
     } else {
         printf("Echec de l'envoi de l'e-mail.\n");
     }
+    return status;
 }
 
 int main(void) {
@@ -102,9 +103,9 @@ int main(void) {
         }
     }
 
-    printf("[4/4] Evoie par mail ");
+    printf("[4/4] Evoie par mail... ");
 
-    exemple_envoi();
+    if(exemple_envoi()) success = 0;
 
     base64_cleanup();
     printf("\nRésultat Phase 2 Loann : %s\n", success ? "REUSSITE" : "ECHEC");

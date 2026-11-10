@@ -35,7 +35,7 @@ int send_email_curl_cmd(const email_config_t *config, const char *subject, const
 
     if (config->username && config->password) {
         cmd_len = snprintf(command, sizeof(command),
-            "curl --url \"smtp://%s:%s\" --mail-from \"%s\" --mail-rcpt \"%s\" --user \"%s:%s\" -T %s --ssl-reqd",
+            "curl --url \"smtp://%s:%s\" --mail-from \"%s\" --mail-rcpt \"%s\" --user \"%s:%s\" -T %s --ssl-reqd > /dev/null 2>&1",
             config->smtp_server,
             config->smtp_port ? config->smtp_port : "587",
             config->from,
@@ -45,7 +45,7 @@ int send_email_curl_cmd(const email_config_t *config, const char *subject, const
             temp_mail_file);
     } else {
         cmd_len = snprintf(command, sizeof(command),
-            "curl --url \"smtp://%s:%s\" --mail-from \"%s\" --mail-rcpt \"%s\" -T %s",
+            "curl --url \"smtp://%s:%s\" --mail-from \"%s\" --mail-rcpt \"%s\" -T %s > /dev/null 2>&1",
             config->smtp_server,
             config->smtp_port ? config->smtp_port : "25",
             config->from,
