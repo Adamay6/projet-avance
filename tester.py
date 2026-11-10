@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Compile et teste les phases 1 et 2 avec Python et GCC ou Clang."""
+"""Compile et teste les phases 1 a 3 avec Python et GCC ou Clang."""
 
 import argparse
 import base64
@@ -20,6 +20,7 @@ RSA = ["phase1_nada/phase1/" + name + ".c"
 BASE64 = ["phase1_loann/base64.c", "phase1_loann/other_base64.c"]
 COMMUN = RSA + ["phase1_adam/chiffrement.c"] + BASE64
 GMP_RSA = ["phase2_nada/gmp_rsa.c", "phase2_nada/convert_bytes.c"]
+COMMANDES_NADA = ["phase3_nada/table_clefs_provisoire.c", "phase3_nada/commandes_nada.c"]
 PROGRAMMES = {
     "test_phase1": COMMUN + ["phase1_adam/tests_chiffrement.c",
                            "phase1_loann/tests_base64.c",
@@ -32,6 +33,7 @@ PROGRAMMES = {
     # Ce test inclut lui-meme keys_io.c et base64.c pour simuler les erreurs.
     "test_io_errors": [RSA[0], RSA[1], RSA[3], BASE64[1], "tests/test_io_errors.c"],
     "test_gmp_rsa": RSA + GMP_RSA + ["phase2_nada/tests_gmp_rsa.c"],
+    "test_commandes_nada": RSA + COMMANDES_NADA + ["phase3_nada/tests_commandes_nada.c"],
 }
 # Programmes de la phase 2 qui ont besoin de la bibliotheque GMP.
 AVEC_GMP = {"test_gmp_rsa"}
@@ -158,6 +160,8 @@ def tester():
     print("\nTous les tests de la phase 1 sont passes.", flush=True)
     lancer("test_gmp_rsa", "gmp")
     print("\nTous les tests de la phase 2 sont passes.", flush=True)
+    lancer("test_commandes_nada", "phase3")
+    print("\nTous les tests de la phase 3 sont passes.", flush=True)
 
 
 def etude_maxprime():
