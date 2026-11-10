@@ -60,6 +60,10 @@ def main():
                                   "-o", str(exe_io)], check=True)
     subprocess.run([str(exe_io)], cwd=essais, check=True, timeout=30)
 
+    verifier_reference(essais)
+
+
+def verifier_reference(essais):
     # Recalculer les blocs avec Python pour verifier les resultats de GMP.
     clair = (essais / "source.bin").read_bytes()
     chiffre = (essais / "chiffre.bin").read_bytes()
